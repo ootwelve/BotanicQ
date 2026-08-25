@@ -1,5 +1,6 @@
 package sla;
 import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.print.PrinterException;
@@ -45,6 +46,10 @@ public class RelatorioPancs extends JFrame {
         repositorio.add(new Planta("008","Cúrcuma","Curcuma longa","Raiz","Cultivo Geral","Anti-inflamatória, antioxidante","Temperos, chás, cápsulas","Medicinal","28/04/2024"));
     }
 
+    // Cor verde principal usada em toda a tela (barra, botões, IDs)
+    private static final Color VERDE = new Color(30,110,60);
+    private static final Color VERDE_CLARO = new Color(224,241,231);
+
     private JTextField campoBusca;
     private JComboBox<String> comboCategoria, comboRegiao, comboTipoUso;
     private DefaultTableModel modeloTabela;
@@ -61,35 +66,43 @@ public class RelatorioPancs extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout(10,10));
 
-        add(criarCabecalho(), BorderLayout.NORTH);
+        add(criarBarraSuperior(), BorderLayout.NORTH);
         add(criarPainelTabela(), BorderLayout.CENTER);
 
         carregarTabela(repositorio);
     }
 
-    private JPanel criarCabecalho() {
-        JPanel painel = new JPanel();
-        painel.setLayout(new BoxLayout(painel, BoxLayout.Y_AXIS));
-        painel.setBorder(BorderFactory.createEmptyBorder(10,15,10,15));
+    // ===== Barra superior verde com título e filtros =====
+    private JPanel criarBarraSuperior() {
+        JPanel painelExterno = new JPanel(new BorderLayout());
 
-        JPanel linhaTitulo = new JPanel(new BorderLayout());
-        JLabel titulo = new JLabel("Relatórios");
+        // Barra verde de destaque no topo
+        JPanel barraVerde = new JPanel(new BorderLayout());
+        barraVerde.setBackground(VERDE);
+        barraVerde.setBorder(BorderFactory.createEmptyBorder(14,20,14,20));
+
+        JLabel titulo = new JLabel("🌿 Relatórios de PANCS");
         titulo.setFont(new Font("SansSerif", Font.BOLD, 22));
-        titulo.setForeground(new Color(30,110,60));
-        linhaTitulo.add(titulo, BorderLayout.WEST);
+        titulo.setForeground(Color.WHITE);
+        barraVerde.add(titulo, BorderLayout.WEST);
 
-        JPanel botoes = new JPanel();
+        JPanel botoes = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        botoes.setOpaque(false);
         JButton btnExportar = new JButton("Exportar Excel");
         JButton btnImprimir = new JButton("Imprimir");
-        estilizarBotaoSecundario(btnExportar);
-        estilizarBotaoSecundario(btnImprimir);
+        estilizarBotaoSobreVerde(btnExportar);
+        estilizarBotaoSobreVerde(btnImprimir);
         btnExportar.addActionListener(e -> exportarCsv());
         btnImprimir.addActionListener(e -> imprimirTabela());
         botoes.add(btnExportar);
         botoes.add(btnImprimir);
-        linhaTitulo.add(botoes, BorderLayout.EAST);
+        barraVerde.add(botoes, BorderLayout.EAST);
 
+        // Linha de filtros abaixo da barra
         JPanel linhaFiltros = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
+        linhaFiltros.setBackground(VERDE_CLARO);
+        linhaFiltros.setBorder(BorderFactory.createEmptyBorder(6,15,6,15));
+
         campoBusca = new JTextField(20);
         campoBusca.setToolTipText("Buscar planta...");
 
@@ -111,9 +124,9 @@ public class RelatorioPancs extends JFrame {
         linhaFiltros.add(comboTipoUso);
         linhaFiltros.add(btnFiltrar);
 
-        painel.add(linhaTitulo);
-        painel.add(linhaFiltros);
-        return painel;
+        painelExterno.add(barraVerde, BorderLayout.NORTH);
+        painelExterno.add(linhaFiltros, BorderLayout.SOUTH);
+        return painelExterno;
     }
 
     private JPanel criarPainelTabela() {
@@ -126,11 +139,23 @@ public class RelatorioPancs extends JFrame {
         tabela = new JTable(modeloTabela);
         tabela.setRowHeight(28);
         tabela.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 12));
+        tabela.getTableHeader().setBackground(VERDE);
+        tabela.getTableHeader().setForeground(Color.WHITE);
+
+        // Renderizador que deixa a coluna ID em verde e negrito
+        DefaultTableCellRenderer rendererId = new DefaultTableCellRenderer();
+        rendererId.setForeground(VERDE);
+        rendererId.setFont(new Font("SansSerif", Font.BOLD, 13));
+        rendererId.setHorizontalAlignment(SwingConstants.CENTER);
+        tabela.getColumnModel().getColumn(0).setCellRenderer(rendererId);
+        tabela.getColumnModel().getColumn(0).setPreferredWidth(50);
 
         JScrollPane scroll = new JScrollPane(tabela);
         painel.add(scroll, BorderLayout.CENTER);
 
         labelContador = new JLabel();
+        labelContador.setForeground(VERDE);
+        labelContador.setFont(new Font("SansSerif", Font.BOLD, 12));
         painel.add(labelContador, BorderLayout.SOUTH);
         return painel;
     }
@@ -197,15 +222,17 @@ public class RelatorioPancs extends JFrame {
     }
 
     private void estilizarBotaoPrimario(JButton b) {
-        b.setBackground(new Color(30,110,60));
+        b.setBackground(VERDE);
         b.setForeground(Color.WHITE);
         b.setFocusPainted(false);
     }
-    private void estilizarBotaoSecundario(JButton b) {
+
+    // Botões que ficam em cima do fundo verde da barra superior
+    private void estilizarBotaoSobreVerde(JButton b) {
         b.setBackground(Color.WHITE);
-        b.setForeground(new Color(30,110,60));
-        b.setBorder(BorderFactory.createLineBorder(new Color(30,110,60)));
+        b.setForeground(VERDE);
         b.setFocusPainted(false);
+        b.setBorder(BorderFactory.createEmptyBorder(6,14,6,14));
     }
 
     public static void main(String[] args) {
