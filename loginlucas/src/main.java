@@ -1,10 +1,8 @@
-
 import com.formdev.flatlaf.FlatLightLaf;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.util.ArrayList;
 
 public class main {
 
@@ -44,7 +42,7 @@ class TelaLogin extends JFrame {
     public TelaLogin() {
 
         setTitle("PANCs - Login");
-        setSize(500, 600);
+        setSize(700, 550);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setResizable(false);
@@ -57,7 +55,7 @@ class TelaLogin extends JFrame {
         JPanel cabecalho = new JPanel();
         cabecalho.setBackground(Cores.verdeEscuro);
         cabecalho.setLayout(new BoxLayout(cabecalho, BoxLayout.Y_AXIS));
-        cabecalho.setBorder(new EmptyBorder(30, 20, 30, 20));
+        cabecalho.setBorder(new EmptyBorder(25, 20, 25, 20));
 
         JLabel titulo = new JLabel("PANCs");
         titulo.setForeground(Color.WHITE);
@@ -82,7 +80,7 @@ class TelaLogin extends JFrame {
         JPanel cartao = new JPanel();
         cartao.setBackground(Color.WHITE);
         cartao.setLayout(new BoxLayout(cartao, BoxLayout.Y_AXIS));
-        cartao.setBorder(new EmptyBorder(35, 45, 35, 45));
+        cartao.setBorder(new EmptyBorder(30, 100, 30, 100));
 
         JLabel loginTitulo = new JLabel("Bem-vindo!");
         loginTitulo.setForeground(Cores.verdeEscuro);
@@ -94,6 +92,7 @@ class TelaLogin extends JFrame {
         mensagem.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JTextField usuario = criarCampo();
+
         JPasswordField senha = new JPasswordField();
         senha.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
 
@@ -104,9 +103,7 @@ class TelaLogin extends JFrame {
         entrar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
         entrar.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JButton cadastro = new JButton(
-                "Ainda não tenho cadastro"
-        );
+        JButton cadastro = new JButton("Ainda não tenho cadastro");
         cadastro.setForeground(Cores.verde);
         cadastro.setBackground(Color.WHITE);
         cadastro.setBorderPainted(false);
@@ -115,14 +112,14 @@ class TelaLogin extends JFrame {
         cartao.add(loginTitulo);
         cartao.add(Box.createVerticalStrut(8));
         cartao.add(mensagem);
-        cartao.add(Box.createVerticalStrut(30));
+        cartao.add(Box.createVerticalStrut(25));
 
         adicionarCampo(cartao, "Usuário", usuario);
         adicionarCampo(cartao, "Senha", senha);
 
-        cartao.add(Box.createVerticalStrut(10));
+        cartao.add(Box.createVerticalStrut(5));
         cartao.add(entrar);
-        cartao.add(Box.createVerticalStrut(10));
+        cartao.add(Box.createVerticalStrut(5));
         cartao.add(cadastro);
 
         JPanel centro = new JPanel(new GridBagLayout());
@@ -184,7 +181,7 @@ class TelaLogin extends JFrame {
         painel.add(label);
         painel.add(Box.createVerticalStrut(5));
         painel.add(campo);
-        painel.add(Box.createVerticalStrut(15));
+        painel.add(Box.createVerticalStrut(12));
     }
 }
 
@@ -198,7 +195,10 @@ class TelaCadastro extends JFrame {
     public TelaCadastro() {
 
         setTitle("PANCs - Cadastro");
-        setSize(520, 750);
+
+        // TAMANHO DESKTOP
+        setSize(800, 600);
+
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setResizable(false);
@@ -207,7 +207,9 @@ class TelaCadastro extends JFrame {
         principal.setBackground(Cores.fundo);
 
 
+        // =================================================
         // CABEÇALHO
+        // =================================================
 
         JPanel cabecalho = new JPanel();
         cabecalho.setBackground(Cores.verdeEscuro);
@@ -215,6 +217,7 @@ class TelaCadastro extends JFrame {
         cabecalho.setBorder(new EmptyBorder(25, 20, 25, 20));
 
         JLabel titulo = new JLabel("Criar sua conta");
+
         titulo.setForeground(Color.WHITE);
         titulo.setFont(new Font("Arial", Font.BOLD, 30));
         titulo.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -222,6 +225,7 @@ class TelaCadastro extends JFrame {
         JLabel subtitulo = new JLabel(
                 "Faça parte da comunidade de pesquisa sobre PANCs"
         );
+
         subtitulo.setForeground(Cores.verdeClaro);
         subtitulo.setAlignmentX(Component.CENTER_ALIGNMENT);
 
@@ -232,89 +236,177 @@ class TelaCadastro extends JFrame {
         principal.add(cabecalho, BorderLayout.NORTH);
 
 
+        // =================================================
         // FORMULÁRIO
+        // =================================================
 
         JPanel formulario = new JPanel();
+
         formulario.setBackground(Color.WHITE);
-        formulario.setLayout(new BoxLayout(formulario, BoxLayout.Y_AXIS));
-        formulario.setBorder(new EmptyBorder(25, 45, 25, 45));
+        formulario.setLayout(new GridBagLayout());
+        formulario.setBorder(
+                new EmptyBorder(30, 60, 30, 60)
+        );
+
+        GridBagConstraints gbc = new GridBagConstraints();
+
+        gbc.insets = new Insets(8, 12, 8, 12);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1;
+
+
+        // =================================================
+        // CAMPOS
+        // =================================================
 
         JTextField nome = criarCampo();
-        JTextField email = criarCampo();
         JTextField usuario = criarCampo();
 
         JPasswordField senha = new JPasswordField();
-        senha.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+
+        senha.setPreferredSize(
+                new Dimension(280, 40)
+        );
 
         JTextField data = criarCampo();
 
-        JTextField alergias = criarCampo();
-        JTextField restricoes = criarCampo();
 
-        JTextArea observacoes = new JTextArea(3, 20);
-        observacoes.setLineWrap(true);
-        observacoes.setWrapStyleWord(true);
+        // =================================================
+        // NÍVEL DE ACESSO
+        // =================================================
 
-        JScrollPane scrollObservacoes =
-                new JScrollPane(observacoes);
+        String[] niveis = {
+                "Usuário",
+                "Administrador"
+        };
 
-        scrollObservacoes.setMaximumSize(
-                new Dimension(Integer.MAX_VALUE, 70)
+        JComboBox<String> nivelAcesso =
+                new JComboBox<>(niveis);
+
+        nivelAcesso.setPreferredSize(
+                new Dimension(280, 40)
         );
 
 
-        adicionarCampo(formulario, "Nome completo", nome);
-        adicionarCampo(formulario, "E-mail", email);
-        adicionarCampo(formulario, "Usuário", usuario);
-        adicionarCampo(formulario, "Senha", senha);
-        adicionarCampo(formulario, "Data de cadastro", data);
+        // =================================================
+        // COLUNA ESQUERDA
+        // =================================================
 
-        adicionarCampo(formulario, "Alergias", alergias);
-        adicionarCampo(formulario, "Restrições alimentares", restricoes);
+        gbc.gridx = 0;
+        gbc.gridy = 0;
 
-        JLabel observacoesLabel =
-                new JLabel("Observações");
-
-        observacoesLabel.setForeground(Cores.verdeEscuro);
-        observacoesLabel.setFont(
-                new Font("Arial", Font.BOLD, 13)
+        adicionarCampoGrid(
+                formulario,
+                gbc,
+                "Nome completo",
+                nome
         );
 
-        formulario.add(observacoesLabel);
-        formulario.add(Box.createVerticalStrut(5));
-        formulario.add(scrollObservacoes);
 
-        formulario.add(Box.createVerticalStrut(18));
+        gbc.gridy++;
 
+        adicionarCampoGrid(
+                formulario,
+                gbc,
+                "Usuário",
+                usuario
+        );
+
+
+        gbc.gridy++;
+
+        adicionarCampoGrid(
+                formulario,
+                gbc,
+                "Nível de acesso",
+                nivelAcesso
+        );
+
+
+        // =================================================
+        // COLUNA DIREITA
+        // =================================================
+
+        gbc.gridx = 1;
+        gbc.gridy = 0;
+
+        adicionarCampoGrid(
+                formulario,
+                gbc,
+                "Senha",
+                senha
+        );
+
+
+        gbc.gridy++;
+
+        adicionarCampoGrid(
+                formulario,
+                gbc,
+                "Data de cadastro",
+                data
+        );
+
+
+        // =================================================
+        // AVISO
+        // =================================================
 
         JLabel aviso = new JLabel(
-                "<html><center>" +
-                "As informações de saúde são opcionais e servem<br>" +
-                "apenas para auxiliar na consulta das PANCs." +
-                "</center></html>"
+                "Selecione o nível de acesso correspondente ao usuário."
         );
 
         aviso.setForeground(Cores.cinza);
-        aviso.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        formulario.add(aviso);
-        formulario.add(Box.createVerticalStrut(18));
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        gbc.gridwidth = 2;
+
+        gbc.insets = new Insets(15, 12, 10, 12);
+
+        formulario.add(aviso, gbc);
 
 
-        JButton cadastrar = new JButton("CRIAR CONTA");
-        cadastrar.setBackground(Cores.verdeMedio);
-        cadastrar.setForeground(Color.WHITE);
+        // =================================================
+        // BOTÃO CADASTRAR
+        // =================================================
+
+        JButton cadastrar =
+                new JButton("CRIAR CONTA");
+
+        cadastrar.setBackground(
+                Cores.verdeMedio
+        );
+
+        cadastrar.setForeground(
+                Color.WHITE
+        );
+
         cadastrar.setFont(
-                new Font("Arial", Font.BOLD, 15)
+                new Font(
+                        "Arial",
+                        Font.BOLD,
+                        15
+                )
         );
-        cadastrar.setMaximumSize(
-                new Dimension(Integer.MAX_VALUE, 45)
+
+        cadastrar.setPreferredSize(
+                new Dimension(300, 45)
         );
-        cadastrar.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        formulario.add(cadastrar);
-        formulario.add(Box.createVerticalStrut(10));
+        gbc.gridy = 4;
 
+        gbc.anchor = GridBagConstraints.CENTER;
+
+        formulario.add(
+                cadastrar,
+                gbc
+        );
+
+
+        // =================================================
+        // BOTÃO VOLTAR
+        // =================================================
 
         JButton voltar =
                 new JButton("Já tenho uma conta");
@@ -322,24 +414,37 @@ class TelaCadastro extends JFrame {
         voltar.setBackground(Color.WHITE);
         voltar.setForeground(Cores.verde);
         voltar.setBorderPainted(false);
-        voltar.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        formulario.add(voltar);
+        gbc.gridy = 5;
+
+        formulario.add(
+                voltar,
+                gbc
+        );
 
 
-        JPanel centro = new JPanel(new GridBagLayout());
-        centro.setBackground(Cores.fundo);
+        JPanel centro =
+                new JPanel(new GridBagLayout());
+
+        centro.setBackground(
+                Cores.fundo
+        );
+
         centro.add(formulario);
 
-        principal.add(centro, BorderLayout.CENTER);
+        principal.add(
+                centro,
+                BorderLayout.CENTER
+        );
 
 
-        // AÇÕES
+        // =================================================
+        // AÇÃO CADASTRAR
+        // =================================================
 
         cadastrar.addActionListener(e -> {
 
             if (nome.getText().isEmpty()
-                    || email.getText().isEmpty()
                     || usuario.getText().isEmpty()
                     || senha.getPassword().length == 0
                     || data.getText().isEmpty()) {
@@ -353,56 +458,106 @@ class TelaCadastro extends JFrame {
 
             } else {
 
+                String nivel =
+                        (String) nivelAcesso.getSelectedItem();
+
                 JOptionPane.showMessageDialog(
                         this,
-                        "Cadastro realizado com sucesso!",
+                        "Cadastro realizado com sucesso!"
+                                + "\nNível de acesso: "
+                                + nivel,
                         "PANCs",
                         JOptionPane.INFORMATION_MESSAGE
                 );
 
                 dispose();
+
                 new TelaLogin();
             }
         });
 
 
+        // =================================================
+        // VOLTAR
+        // =================================================
+
         voltar.addActionListener(e -> {
+
             dispose();
+
             new TelaLogin();
         });
 
 
         add(principal);
+
         setVisible(true);
     }
 
 
     private JTextField criarCampo() {
 
-        JTextField campo = new JTextField();
-        campo.setMaximumSize(
-                new Dimension(Integer.MAX_VALUE, 40)
+        JTextField campo =
+                new JTextField();
+
+        campo.setPreferredSize(
+                new Dimension(280, 40)
         );
 
         return campo;
     }
 
 
-    private void adicionarCampo(
+    private void adicionarCampoGrid(
             JPanel painel,
+            GridBagConstraints gbc,
             String texto,
             JComponent campo) {
 
-        JLabel label = new JLabel(texto);
-        label.setForeground(Cores.verdeEscuro);
-        label.setFont(
-                new Font("Arial", Font.BOLD, 13)
+        JPanel grupo =
+                new JPanel();
+
+        grupo.setBackground(
+                Color.WHITE
         );
 
-        painel.add(label);
-        painel.add(Box.createVerticalStrut(5));
-        painel.add(campo);
-        painel.add(Box.createVerticalStrut(12));
+        grupo.setLayout(
+                new BoxLayout(
+                        grupo,
+                        BoxLayout.Y_AXIS
+                )
+        );
+
+        JLabel label =
+                new JLabel(texto);
+
+        label.setForeground(
+                Cores.verdeEscuro
+        );
+
+        label.setFont(
+                new Font(
+                        "Arial",
+                        Font.BOLD,
+                        13
+                )
+        );
+
+        grupo.add(label);
+
+        grupo.add(
+                Box.createVerticalStrut(5)
+        );
+
+        grupo.add(campo);
+
+        gbc.fill =
+                GridBagConstraints.HORIZONTAL;
+
+        painel.add(
+                grupo,
+                gbc
+        );
     }
 }
 
@@ -416,142 +571,310 @@ class TelaPrincipal extends JFrame {
     public TelaPrincipal(String usuario) {
 
         setTitle("PANCs - Pesquisa");
-        setSize(900, 650);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        setSize(1000, 700);
+
+        setDefaultCloseOperation(
+                JFrame.EXIT_ON_CLOSE
+        );
+
         setLocationRelativeTo(null);
 
-        JPanel principal = new JPanel(new BorderLayout());
-        principal.setBackground(Cores.fundo);
+        setResizable(false);
 
 
-        // CABEÇALHO
+        JPanel principal =
+                new JPanel(new BorderLayout());
 
-        JPanel cabecalho = new JPanel(new BorderLayout());
-        cabecalho.setBackground(Cores.verdeEscuro);
-        cabecalho.setBorder(
-                new EmptyBorder(20, 30, 20, 30)
+        principal.setBackground(
+                Cores.fundo
         );
+
+
+        // =================================================
+        // CABEÇALHO
+        // =================================================
+
+        JPanel cabecalho =
+                new JPanel(new BorderLayout());
+
+        cabecalho.setBackground(
+                Cores.verdeEscuro
+        );
+
+        cabecalho.setBorder(
+                new EmptyBorder(
+                        20,
+                        30,
+                        20,
+                        30
+                )
+        );
+
 
         JLabel titulo =
                 new JLabel("🌿 PANCs");
 
-        titulo.setForeground(Color.WHITE);
-        titulo.setFont(
-                new Font("Arial", Font.BOLD, 30)
+        titulo.setForeground(
+                Color.WHITE
         );
+
+        titulo.setFont(
+                new Font(
+                        "Arial",
+                        Font.BOLD,
+                        30
+                )
+        );
+
 
         JLabel usuarioLabel =
-                new JLabel("Olá, " + usuario + "!");
+                new JLabel(
+                        "Olá, " + usuario + "!"
+                );
 
-        usuarioLabel.setForeground(Cores.verdeClaro);
+        usuarioLabel.setForeground(
+                Cores.verdeClaro
+        );
+
         usuarioLabel.setFont(
-                new Font("Arial", Font.PLAIN, 15)
+                new Font(
+                        "Arial",
+                        Font.PLAIN,
+                        15
+                )
         );
 
-        cabecalho.add(titulo, BorderLayout.WEST);
-        cabecalho.add(usuarioLabel, BorderLayout.EAST);
 
-        principal.add(cabecalho, BorderLayout.NORTH);
+        cabecalho.add(
+                titulo,
+                BorderLayout.WEST
+        );
+
+        cabecalho.add(
+                usuarioLabel,
+                BorderLayout.EAST
+        );
 
 
+        principal.add(
+                cabecalho,
+                BorderLayout.NORTH
+        );
+
+
+        // =================================================
         // CONTEÚDO
+        // =================================================
 
-        JPanel conteudo = new JPanel();
-        conteudo.setBackground(Cores.fundo);
-        conteudo.setLayout(
-                new BoxLayout(conteudo, BoxLayout.Y_AXIS)
+        JPanel conteudo =
+                new JPanel();
+
+        conteudo.setBackground(
+                Cores.fundo
         );
+
+        conteudo.setLayout(
+                new BoxLayout(
+                        conteudo,
+                        BoxLayout.Y_AXIS
+                )
+        );
+
         conteudo.setBorder(
-                new EmptyBorder(40, 70, 40, 70)
+                new EmptyBorder(
+                        50,
+                        100,
+                        50,
+                        100
+                )
         );
 
 
         JLabel bemVindo =
-                new JLabel("Explore o mundo das PANCs");
+                new JLabel(
+                        "Explore o mundo das PANCs"
+                );
 
-        bemVindo.setForeground(Cores.verdeEscuro);
-        bemVindo.setFont(
-                new Font("Arial", Font.BOLD, 28)
+        bemVindo.setForeground(
+                Cores.verdeEscuro
         );
-        bemVindo.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        bemVindo.setFont(
+                new Font(
+                        "Arial",
+                        Font.BOLD,
+                        28
+                )
+        );
+
+        bemVindo.setAlignmentX(
+                Component.CENTER_ALIGNMENT
+        );
+
 
         JLabel explicacao =
                 new JLabel(
                         "Pesquise informações sobre as plantas que já foram estudadas."
                 );
 
-        explicacao.setForeground(Cores.cinza);
-        explicacao.setAlignmentX(Component.CENTER_ALIGNMENT);
+        explicacao.setForeground(
+                Cores.cinza
+        );
+
+        explicacao.setAlignmentX(
+                Component.CENTER_ALIGNMENT
+        );
+
 
         conteudo.add(bemVindo);
-        conteudo.add(Box.createVerticalStrut(8));
+
+        conteudo.add(
+                Box.createVerticalStrut(8)
+        );
+
         conteudo.add(explicacao);
-        conteudo.add(Box.createVerticalStrut(30));
+
+        conteudo.add(
+                Box.createVerticalStrut(35)
+        );
 
 
-        // CAMPO DE PESQUISA
+        // =================================================
+        // PESQUISA
+        // =================================================
 
-        JPanel pesquisa = new JPanel(new BorderLayout(10, 0));
-        pesquisa.setBackground(Color.WHITE);
+        JPanel pesquisa =
+                new JPanel(
+                        new BorderLayout(10, 0)
+                );
+
+        pesquisa.setBackground(
+                Color.WHITE
+        );
+
         pesquisa.setBorder(
-                new EmptyBorder(15, 15, 15, 15)
+                new EmptyBorder(
+                        15,
+                        15,
+                        15,
+                        15
+                )
         );
+
         pesquisa.setMaximumSize(
-                new Dimension(700, 65)
+                new Dimension(750, 65)
         );
+
 
         JTextField campoPesquisa =
                 new JTextField();
 
+
         JButton pesquisar =
                 new JButton("PESQUISAR");
 
-        pesquisar.setBackground(Cores.verde);
-        pesquisar.setForeground(Color.WHITE);
-
-        pesquisa.add(campoPesquisa, BorderLayout.CENTER);
-        pesquisa.add(pesquisar, BorderLayout.EAST);
-
-        conteudo.add(pesquisa);
-        conteudo.add(Box.createVerticalStrut(30));
-
-
-        // BOTÕES
-
-        JPanel botoes =
-                new JPanel(new GridLayout(1, 2, 20, 0));
-
-        botoes.setBackground(Cores.fundo);
-        botoes.setMaximumSize(
-                new Dimension(700, 100)
+        pesquisar.setBackground(
+                Cores.verde
         );
 
+        pesquisar.setForeground(
+                Color.WHITE
+        );
+
+
+        pesquisa.add(
+                campoPesquisa,
+                BorderLayout.CENTER
+        );
+
+        pesquisa.add(
+                pesquisar,
+                BorderLayout.EAST
+        );
+
+
+        conteudo.add(pesquisa);
+
+        conteudo.add(
+                Box.createVerticalStrut(30)
+        );
+
+
+        // =================================================
+        // BOTÕES
+        // =================================================
+
+        JPanel botoes =
+                new JPanel(
+                        new GridLayout(
+                                1,
+                                2,
+                                20,
+                                0
+                        )
+                );
+
+        botoes.setBackground(
+                Cores.fundo
+        );
+
+        botoes.setMaximumSize(
+                new Dimension(750, 100)
+        );
+
+
         JButton todas =
-                new JButton("🌱 VER TODAS AS PANCs");
+                new JButton(
+                        "🌱 VER TODAS AS PANCs"
+                );
 
         JButton receitas =
-                new JButton("🍃 RECEITAS");
+                new JButton(
+                        "🍃 RECEITAS"
+                );
 
-        todas.setBackground(Cores.verdeMedio);
-        todas.setForeground(Color.WHITE);
 
-        receitas.setBackground(Cores.verde);
-        receitas.setForeground(Color.WHITE);
+        todas.setBackground(
+                Cores.verdeMedio
+        );
+
+        todas.setForeground(
+                Color.WHITE
+        );
+
+
+        receitas.setBackground(
+                Cores.verde
+        );
+
+        receitas.setForeground(
+                Color.WHITE
+        );
+
 
         botoes.add(todas);
         botoes.add(receitas);
 
+
         conteudo.add(botoes);
 
-        principal.add(conteudo, BorderLayout.CENTER);
+
+        principal.add(
+                conteudo,
+                BorderLayout.CENTER
+        );
 
 
+        // =================================================
         // PESQUISA
+        // =================================================
 
         pesquisar.addActionListener(e -> {
 
             String busca =
                     campoPesquisa.getText();
+
 
             if (busca.isEmpty()) {
 
@@ -564,12 +887,17 @@ class TelaPrincipal extends JFrame {
 
                 JOptionPane.showMessageDialog(
                         this,
-                        "Pesquisa por: " + busca +
-                        "\n\nAqui aparecerão as informações da planta."
+                        "Pesquisa por: "
+                                + busca
+                                + "\n\nAqui aparecerão as informações da planta."
                 );
             }
         });
 
+
+        // =================================================
+        // TODAS AS PANCs
+        // =================================================
 
         todas.addActionListener(e -> {
 
@@ -579,6 +907,10 @@ class TelaPrincipal extends JFrame {
             );
         });
 
+
+        // =================================================
+        // RECEITAS
+        // =================================================
 
         receitas.addActionListener(e -> {
 
@@ -590,7 +922,7 @@ class TelaPrincipal extends JFrame {
 
 
         add(principal);
+
         setVisible(true);
     }
 }
-
