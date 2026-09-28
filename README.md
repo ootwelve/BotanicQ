@@ -1,2 +1,0 @@
-# BotanicQ
-PANCs.
