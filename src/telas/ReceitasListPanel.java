@@ -251,8 +251,17 @@ public class ReceitasListPanel extends JPanel {
     }
 
     private void cadastrarNovaReceita() {
-    	// TEMPORÁRIO
-        JOptionPane.showMessageDialog(this, "Abre a tela de cadastro de receita.");
+        ReceitaCadastroDialog dialog = new ReceitaCadastroDialog(parentFrame, null);
+        dialog.setVisible(true);
+
+        if (dialog.isConfirmado()) {
+            Receita novaReceita = dialog.getReceita();
+           
+            novaReceita.setId(listaReceitasMock.size() + 1);
+            listaReceitasMock.add(novaReceita);
+            renderizarGrid(listaReceitasMock);
+            JOptionPane.showMessageDialog(this, "Receita cadastrada com sucesso!");
+        }
     }
 
     private void editarReceitaSelecionada() {
@@ -260,8 +269,14 @@ public class ReceitasListPanel extends JPanel {
             JOptionPane.showMessageDialog(this, "Selecione uma receita para editar.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        // TEMPORÁRIO
-        JOptionPane.showMessageDialog(this, "Abre a tela de edição para: " + receitaSelecionada.getTitulo());
+
+        ReceitaCadastroDialog dialog = new ReceitaCadastroDialog(parentFrame, receitaSelecionada);
+        dialog.setVisible(true);
+
+        if (dialog.isConfirmado()) {
+            renderizarGrid(listaReceitasMock);
+            JOptionPane.showMessageDialog(this, "Receita atualizada com sucesso!");
+        }
     }
 
     private void excluirReceitaSelecionada() {
