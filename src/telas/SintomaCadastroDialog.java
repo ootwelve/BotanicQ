@@ -1,6 +1,6 @@
-package view;
+package telas;
 
-import model.Sintoma;
+import negocio.Sintoma;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;

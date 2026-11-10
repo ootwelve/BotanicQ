@@ -2,7 +2,7 @@ package DAO;
 
 import java.sql.*;
 
-import model.Sintoma;
+import negocio.Sintoma;
 
 public class SintomaDAO {
     private Connection conexao;

@@ -1,7 +1,7 @@
 package DAO;
 
-import model.PANC;
-import model.Sintoma;
+import negocio.PANC;
+import negocio.Sintoma;
 
 import java.sql.*;
 import java.util.ArrayList;

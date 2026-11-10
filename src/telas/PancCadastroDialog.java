@@ -1,6 +1,6 @@
-package view;
+package telas;
 
-import model.PANC;
+import negocio.PANC;
 
 import javax.swing.*;
 import java.awt.*;

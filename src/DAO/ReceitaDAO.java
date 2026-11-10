@@ -4,8 +4,8 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-import model.PANC;
-import model.Receita;
+import negocio.PANC;
+import negocio.Receita;
 
 public class ReceitaDAO {
     private Connection conexao;

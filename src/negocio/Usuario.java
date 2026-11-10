@@ -1,4 +1,4 @@
-package model;
+package negocio;
 
 import java.time.LocalDate;
 

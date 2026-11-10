@@ -1,7 +1,7 @@
 package DAO;
 
 import java.sql.*;
-import model.Usuario;
+import negocio.Usuario;
 
 public class UsuarioDAO {
     private Connection conexao;

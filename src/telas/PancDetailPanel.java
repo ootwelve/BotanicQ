@@ -1,7 +1,7 @@
-package view;
+package telas;
 
-import model.PANC;
-import model.Receita;
+import negocio.PANC;
+import negocio.Receita;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;

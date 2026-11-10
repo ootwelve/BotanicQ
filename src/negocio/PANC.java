@@ -1,7 +1,7 @@
-package model;
+package negocio;
 
-import model.Receita;
-import model.Sintoma;
+import negocio.Receita;
+import negocio.Sintoma;
 
 import java.util.ArrayList;
 import java.util.List;

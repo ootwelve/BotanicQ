@@ -1,6 +1,6 @@
-package view;
+package telas;
 
-import model.Usuario;
+import negocio.Usuario;
 import DAO.UsuarioDAO; // Descomente quando integrar com a base de dados
 // import util.Conexao; // Descomente e ajuste o pacote da sua classe de Conexão
 
