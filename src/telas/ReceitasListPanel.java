@@ -2,6 +2,7 @@ package telas;
 
 import negocio.Receita;
 import negocio.Usuario;
+import DAO.ReceitaDAO;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -9,6 +10,8 @@ import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,7 +22,7 @@ public class ReceitasListPanel extends JPanel {
 
     private JTextField txtBusca;
     private JPanel pnlGridCards;
-    private List<Receita> listaReceitasMock = new ArrayList<>();
+    private List<Receita> listaReceitasCache = new ArrayList<>(); // Armazena os dados atuais da tela
     
     private JPanel cardSelecionado = null;
     private Receita receitaSelecionada = null;
@@ -36,10 +39,10 @@ public class ReceitasListPanel extends JPanel {
         setBorder(new EmptyBorder(25, 25, 25, 25));
 
         add(criarTopo(), BorderLayout.NORTH);
-
         add(criarContainerGrid(), BorderLayout.CENTER);
 
-        carregarDadosMock();
+        // Carrega os dados reais do banco ao iniciar o painel
+        carregarDadosDoBanco();
     }
 
     private JPanel criarTopo() {
@@ -256,11 +259,18 @@ public class ReceitasListPanel extends JPanel {
 
         if (dialog.isConfirmado()) {
             Receita novaReceita = dialog.getReceita();
-           
-            novaReceita.setId(listaReceitasMock.size() + 1);
-            listaReceitasMock.add(novaReceita);
-            renderizarGrid(listaReceitasMock);
-            JOptionPane.showMessageDialog(this, "Receita cadastrada com sucesso!");
+            
+            try (Connection conn = DAO.Conexao.getConexao()) {
+                ReceitaDAO dao = new ReceitaDAO(conn);
+                dao.cadastrar(novaReceita); // Salva de verdade no PostgreSQL!
+                
+                carregarDadosDoBanco(); // Recarrega do banco para atualizar a tela
+                JOptionPane.showMessageDialog(this, "Receita cadastrada com sucesso!");
+            } catch (SQLException e) {
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(this, "Erro ao cadastrar receita no banco: " + e.getMessage(), 
+                        "Erro", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
 
@@ -274,8 +284,17 @@ public class ReceitasListPanel extends JPanel {
         dialog.setVisible(true);
 
         if (dialog.isConfirmado()) {
-            renderizarGrid(listaReceitasMock);
-            JOptionPane.showMessageDialog(this, "Receita atualizada com sucesso!");
+            try (Connection conn = DAO.Conexao.getConexao()) {
+                ReceitaDAO dao = new ReceitaDAO(conn);
+                dao.editar(receitaSelecionada); // Atualiza de verdade no PostgreSQL!
+                
+                carregarDadosDoBanco(); // Recarrega do banco
+                JOptionPane.showMessageDialog(this, "Receita atualizada com sucesso!");
+            } catch (SQLException e) {
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(this, "Erro ao atualizar receita no banco: " + e.getMessage(), 
+                        "Erro", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
 
@@ -294,49 +313,43 @@ public class ReceitasListPanel extends JPanel {
         );
 
         if (opcao == JOptionPane.YES_OPTION) {
-            listaReceitasMock.remove(receitaSelecionada);
-            renderizarGrid(listaReceitasMock);
-            JOptionPane.showMessageDialog(this, "Receita excluída com sucesso!");
+            try (Connection conn = DAO.Conexao.getConexao()) {
+                ReceitaDAO dao = new ReceitaDAO(conn);
+                dao.remover(receitaSelecionada.getId()); // Remove do PostgreSQL!
+                
+                carregarDadosDoBanco(); // Recarrega do banco
+                JOptionPane.showMessageDialog(this, "Receita excluída com sucesso!");
+            } catch (SQLException e) {
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(this, "Erro ao excluir receita do banco: " + e.getMessage(), 
+                        "Erro", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
 
-    private void carregarDadosMock() {
-        listaReceitasMock.clear();
-
-        Receita r1 = new Receita();
-        r1.setId(1);
-        r1.setTitulo("Refogado de Ora-pro-nóbis");
-        r1.setSrc_imagem("C:/Users/henri/Downloads/carro.jpg");
-        
-        Receita r2 = new Receita();
-        r2.setId(2);
-        r2.setTitulo("Peixinho Frito Empanado");
-
-        Receita r3 = new Receita();
-        r3.setId(3);
-        r3.setTitulo("Geleia de Amora Silvestre");
-
-        Receita r4 = new Receita();
-        r4.setId(4);
-        r4.setTitulo("Salada de Serralha e Tomate");
-
-        listaReceitasMock.add(r1);
-        listaReceitasMock.add(r2);
-        listaReceitasMock.add(r3);
-        listaReceitasMock.add(r4);
-
-        renderizarGrid(listaReceitasMock);
+    private void carregarDadosDoBanco() {
+        try (Connection conn = DAO.Conexao.getConexao()) {
+            ReceitaDAO receitaDAO = new ReceitaDAO(conn);
+            
+            listaReceitasCache = receitaDAO.listar(); // Puxa do banco real
+            renderizarGrid(listaReceitasCache);
+            
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Erro ao carregar receitas do banco: " + e.getMessage(), 
+                    "Erro", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void filtrarReceitas() {
         String termo = txtBusca.getText().toLowerCase().trim();
         if (termo.isEmpty()) {
-            renderizarGrid(listaReceitasMock);
+            renderizarGrid(listaReceitasCache);
             return;
         }
 
         List<Receita> filtradas = new ArrayList<>();
-        for (Receita r : listaReceitasMock) {
+        for (Receita r : listaReceitasCache) {
             if (r.getTitulo().toLowerCase().contains(termo)) {
                 filtradas.add(r);
             }

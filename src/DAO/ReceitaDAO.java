@@ -15,7 +15,8 @@ public class ReceitaDAO {
     }
 
     public void cadastrar(Receita receita) throws SQLException {
-        String sql = "INSERT INTO receita (titulo, src_imagem, desc, outros_ingredientes, preparo, uso) " +
+        // CORRIGIDO: de 'desc' para 'descricao'
+        String sql = "INSERT INTO receita (titulo, src_imagem, descricao, outros_ingredientes, preparo, uso) " +
                      "VALUES (?, ?, ?, ?, ?, ?) RETURNING id";
 
         try (PreparedStatement stmt = conexao.prepareStatement(sql)) {
@@ -23,7 +24,6 @@ public class ReceitaDAO {
             stmt.setString(2, receita.getSrc_imagem());
             stmt.setString(3, receita.getDesc());
             
-            // Converte o ArrayList<String> para o tipo ARRAY nativo do PostgreSQL
             Array arrayIngredientes = conexao.createArrayOf("text", receita.getOutros_ingredientes().toArray());
             stmt.setArray(4, arrayIngredientes);
             
@@ -36,7 +36,7 @@ public class ReceitaDAO {
             }
         }
 
-      salvarIngredientesPanc(receita);
+        salvarIngredientesPanc(receita);
     }
 
     private void salvarIngredientesPanc(Receita receita) throws SQLException {
@@ -49,6 +49,36 @@ public class ReceitaDAO {
             }
             stmt.executeBatch();
         }
+    }
+
+    public List<Receita> listar() throws SQLException {
+        List<Receita> receitas = new ArrayList<>();
+        String sql = "SELECT * FROM receita ORDER BY id";
+
+        try (PreparedStatement stmt = conexao.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                Receita receita = new Receita();
+                receita.setId(rs.getInt("id"));
+                receita.setTitulo(rs.getString("titulo"));
+                receita.setSrc_imagem(rs.getString("src_imagem"));
+                receita.setDesc(rs.getString("descricao")); // CORRIGIDO
+                
+                Array arraySql = rs.getArray("outros_ingredientes");
+                if (arraySql != null) {
+                    String[] arr = (String[]) arraySql.getArray();
+                    receita.setOutros_ingredientes(new ArrayList<>(List.of(arr)));
+                }
+
+                receita.setPreparo(rs.getString("preparo"));
+                receita.setUso(rs.getString("uso"));
+                receita.setPanc_ingredientes(carregarPancsDaReceita(receita.getId()));
+
+                receitas.add(receita);
+            }
+        }
+        return receitas;
     }
 
     public Receita buscarPorId(int id) throws SQLException {
@@ -64,7 +94,7 @@ public class ReceitaDAO {
                 receita.setId(rs.getInt("id"));
                 receita.setTitulo(rs.getString("titulo"));
                 receita.setSrc_imagem(rs.getString("src_imagem"));
-                receita.setDesc(rs.getString("desc"));
+                receita.setDesc(rs.getString("descricao")); // CORRIGIDO
                 
                 Array arraySql = rs.getArray("outros_ingredientes");
                 if (arraySql != null) {
@@ -95,7 +125,7 @@ public class ReceitaDAO {
                 panc.setId(rs.getInt("id"));
                 panc.setNome(rs.getString("nome"));
                 panc.setSrc_imagem(rs.getString("src_imagem"));
-                panc.setDesc(rs.getString("desc"));
+                panc.setDesc(rs.getString("descricao")); // Caso a tabela panc use descricao também, ajuste aqui se necessário
                 panc.setOrigem_nativa(rs.getString("origem_nativa"));
                 pancs.add(panc);
             }
@@ -104,7 +134,8 @@ public class ReceitaDAO {
     }
 
     public void editar(Receita receita) throws SQLException {
-        String sql = "UPDATE receita SET titulo = ?, src_imagem = ?, desc = ?, " +
+        // CORRIGIDO: de 'desc' para 'descricao'
+        String sql = "UPDATE receita SET titulo = ?, src_imagem = ?, descricao = ?, " +
                      "outros_ingredientes = ?, preparo = ?, uso = ? WHERE id = ?";
 
         try (PreparedStatement stmt = conexao.prepareStatement(sql)) {

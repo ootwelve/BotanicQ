@@ -7,14 +7,14 @@ import java.sql.SQLException;
 public class Conexao {
 
     private static final String URL = "jdbc:postgresql://localhost:5432/botanicq_db";
-    private static final String USUARIO = "...";
-    private static final String SENHA = "...";
+    private static final String USUARIO = "postgres";
+    private static final String SENHA = "botanicqadmin";
 
     static {
         try {
             Class.forName("org.postgresql.Driver");
         } catch (ClassNotFoundException e) {
-            throw new RuntimeException("Driver do PostgreSQL não encontrado no classpath!", e);
+            throw new RuntimeException("Driver do PostgreSQL não encontrado no classpath.", e);
         }
     }
 
