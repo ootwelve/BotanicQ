@@ -6,6 +6,7 @@ import java.util.List;
 
 import negocio.PANC;
 import negocio.Receita;
+import negocio.Sintoma;
 
 public class ReceitaDAO {
     private Connection conexao;
@@ -37,6 +38,7 @@ public class ReceitaDAO {
         }
 
         salvarIngredientesPanc(receita);
+        salvarSintomasReceita(receita)
     }
 
     private void salvarIngredientesPanc(Receita receita) throws SQLException {
@@ -49,6 +51,38 @@ public class ReceitaDAO {
             }
             stmt.executeBatch();
         }
+    }
+    
+    private void salvarSintomasReceita(Receita receita) throws SQLException {
+        String sql = "INSERT INTO receita_sintoma (receita_id, sintoma_id) VALUES (?, ?)";
+        try (PreparedStatement stmt = conexao.prepareStatement(sql)) {
+            for (Sintoma sintoma : receita.getSintoma_associados()) {
+                stmt.setInt(1, receita.getId());
+                stmt.setInt(2, sintoma.getId());
+                stmt.addBatch();
+            }
+            stmt.executeBatch();
+        }
+    }
+    
+    private List<Sintoma> carregarSintomasDaReceita(int receitaId) throws SQLException {
+        List<Sintoma> sintomas = new ArrayList<>();
+        String sql = "SELECT s.* FROM sintoma s " +
+                     "JOIN receita_sintoma rs ON s.id = rs.sintoma_id " +
+                     "WHERE rs.receita_id = ?";
+
+        try (PreparedStatement stmt = conexao.prepareStatement(sql)) {
+            stmt.setInt(1, receitaId);
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                Sintoma sintoma = new Sintoma();
+                sintoma.setId(rs.getInt("id"));
+                sintoma.setNome(rs.getString("nome"));
+                sintoma.setDesc(rs.getString("descricao"));
+                sintomas.add(sintoma);
+            }
+        }
+        return sintomas;
     }
 
     public List<Receita> listar() throws SQLException {
@@ -134,7 +168,6 @@ public class ReceitaDAO {
     }
 
     public void editar(Receita receita) throws SQLException {
-        // CORRIGIDO: de 'desc' para 'descricao'
         String sql = "UPDATE receita SET titulo = ?, src_imagem = ?, descricao = ?, " +
                      "outros_ingredientes = ?, preparo = ?, uso = ? WHERE id = ?";
 
@@ -157,6 +190,12 @@ public class ReceitaDAO {
             stmt.setInt(1, receita.getId());
             stmt.executeUpdate();
         }
+        String sqlDeleteSintomas = "DELETE FROM receita_sintoma WHERE receita_id = ?";
+        try (PreparedStatement stmt = conexao.prepareStatement(sqlDeleteSintomas)) {
+            stmt.setInt(1, receita.getId());
+            stmt.executeUpdate();
+        }
+        salvarSintomasReceita(receita);
         salvarIngredientesPanc(receita);
     }
 

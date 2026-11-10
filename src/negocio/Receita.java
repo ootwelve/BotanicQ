@@ -12,6 +12,7 @@ public class Receita {
     private String preparo;
     private String uso;
     private List<PANC> panc_ingredientes;
+    private List<Sintoma> sintoma_associados = new ArrayList<>();
 
     public Receita() {
         this.outros_ingredientes = new ArrayList<>();
@@ -53,4 +54,12 @@ public class Receita {
 
     public List<PANC> getPanc_ingredientes() { return panc_ingredientes; }
     public void setPanc_ingredientes(List<PANC> panc_ingredientes) { this.panc_ingredientes = panc_ingredientes; }
+    
+    public List<Sintoma> getSintoma_associados() {
+        return sintoma_associados;
+    }
+
+    public void setSintoma_associados(List<Sintoma> sintoma_associados) {
+        this.sintoma_associados = sintoma_associados;
+    }
 }
