@@ -1,6 +1,8 @@
 package telas;
 
-import negocio.Receita;
+import DAO.Conexao;
+import DAO.SintomaDAO;
+import negocio.LogAlteracoes;
 import negocio.Sintoma;
 import negocio.Usuario;
 
@@ -9,8 +11,9 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
-
 import java.awt.*;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,7 +25,9 @@ public class SintomasListPanel extends JPanel {
     private JTable tabela;
     private DefaultTableModel tableModel;
     private JTextField txtBusca;
-    private List<Sintoma> listaSintomasMock = new ArrayList<>();
+
+    private List<Sintoma> listaSintomasCache = new ArrayList<>();
+    private List<Sintoma> listaSintomasExibidos = new ArrayList<>();
 
     private static final Color VERDE_TEXTO = new Color(34, 112, 62);
 
@@ -35,10 +40,9 @@ public class SintomasListPanel extends JPanel {
         setBorder(new EmptyBorder(25, 25, 25, 25));
 
         add(criarTopo(), BorderLayout.NORTH);
-
         add(criarTabela(), BorderLayout.CENTER);
 
-        carregarDadosMock();
+        carregarDadosDoBanco();
     }
 
     private JPanel criarTopo() {
@@ -105,19 +109,7 @@ public class SintomasListPanel extends JPanel {
             btnNovo.setBorderPainted(false);
             btnNovo.setOpaque(true);
             btnNovo.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-            btnNovo.addActionListener(e -> {
-                SintomaCadastroDialog dialog = new SintomaCadastroDialog(parentFrame);
-                dialog.setVisible(true);
-
-                if (dialog.isConfirmado()) {
-                    Sintoma novoSintoma = dialog.getSintoma();
-                    novoSintoma.setId(listaSintomasMock.size() + 1);
-                    listaSintomasMock.add(novoSintoma);
-                    preencherTabela(listaSintomasMock);
-                    JOptionPane.showMessageDialog(this, "Sintoma cadastrado com sucesso!");
-                }
-            });
+            btnNovo.addActionListener(e -> cadastrarNovoSintoma());
 
             JButton btnEditar = new JButton("✏️ Editar");
             btnEditar.setFont(new Font("SansSerif", Font.BOLD, 13));
@@ -128,7 +120,6 @@ public class SintomasListPanel extends JPanel {
             btnEditar.setBorderPainted(false);
             btnEditar.setOpaque(true);
             btnEditar.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
             btnEditar.addActionListener(e -> editarSintomaSelecionado());
 
             JButton btnExcluir = new JButton("🗑️ Excluir");
@@ -140,7 +131,6 @@ public class SintomasListPanel extends JPanel {
             btnExcluir.setBorderPainted(false);
             btnExcluir.setOpaque(true);
             btnExcluir.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
             btnExcluir.addActionListener(e -> excluirSintomaSelecionado());
 
             pnlBotoesAdmin.add(btnNovo);
@@ -174,6 +164,7 @@ public class SintomasListPanel extends JPanel {
         tabela.setSelectionForeground(Color.BLACK);
         tabela.setShowVerticalLines(false);
         tabela.setGridColor(new Color(230, 230, 230));
+        tabela.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
         JTableHeader header = tabela.getTableHeader();
         header.setPreferredSize(new Dimension(0, 38));
@@ -224,13 +215,43 @@ public class SintomasListPanel extends JPanel {
     private void abrirDetalhesSelecionado() {
         int linha = tabela.getSelectedRow();
         if (linha != -1) {
-            Sintoma sintomaSelecionado = listaSintomasMock.get(linha);
+            Sintoma sintomaSelecionado = listaSintomasExibidos.get(linha);
             parentFrame.exibirDetalhesSintoma(sintomaSelecionado);
         } else {
             JOptionPane.showMessageDialog(this,
                     "Selecione um sintoma para ver os detalhes.",
                     "Aviso",
                     JOptionPane.WARNING_MESSAGE);
+        }
+    }
+
+    private void cadastrarNovoSintoma() {
+        SintomaCadastroDialog dialog = new SintomaCadastroDialog(parentFrame);
+        dialog.setVisible(true);
+
+        if (dialog.isConfirmado()) {
+            try (Connection conn = Conexao.getConexao()) {
+                SintomaDAO dao = new SintomaDAO(conn);
+                dao.cadastrar(dialog.getSintoma(), usuarioLogado.getId());
+                LogAlteracoes.registrar(usuarioLogado, LogAlteracoes.CADASTRO, LogAlteracoes.TIPO_SINTOMA,
+                        dialog.getSintoma().getId(), dialog.getSintoma().getNome());
+
+                carregarDadosDoBanco();
+                JOptionPane.showMessageDialog(this, "Sintoma cadastrado com sucesso!");
+            } catch (SQLException e) {
+                if (Conexao.isNomeDuplicado(e)) {
+                    JOptionPane.showMessageDialog(this,
+                            "Já existe um sintoma cadastrado com o nome '" + dialog.getSintoma().getNome() + "'.",
+                            "Nome duplicado",
+                            JOptionPane.WARNING_MESSAGE);
+                } else {
+                    e.printStackTrace();
+                    JOptionPane.showMessageDialog(this,
+                            "Erro ao cadastrar sintoma no banco: " + e.getMessage(),
+                            "Erro BD",
+                            JOptionPane.ERROR_MESSAGE);
+                }
+            }
         }
     }
 
@@ -242,28 +263,50 @@ public class SintomasListPanel extends JPanel {
             return;
         }
 
-        Sintoma sintomaSelecionado = listaSintomasMock.get(linhaSelecionada);
+        Sintoma sintomaSelecionado = listaSintomasExibidos.get(linhaSelecionada);
         SintomaCadastroDialog dialog = new SintomaCadastroDialog(parentFrame, sintomaSelecionado);
         dialog.setVisible(true);
 
         if (dialog.isConfirmado()) {
-            preencherTabela(listaSintomasMock);
-            JOptionPane.showMessageDialog(this, "Sintoma atualizado com sucesso!");
+            try (Connection conn = Conexao.getConexao()) {
+                SintomaDAO dao = new SintomaDAO(conn);
+                dao.editar(dialog.getSintoma(), usuarioLogado.getId());
+                LogAlteracoes.registrar(usuarioLogado, LogAlteracoes.EDICAO, LogAlteracoes.TIPO_SINTOMA,
+                        dialog.getSintoma().getId(), dialog.getSintoma().getNome());
+
+                carregarDadosDoBanco();
+                JOptionPane.showMessageDialog(this, "Sintoma atualizado com sucesso!");
+            } catch (SQLException e) {
+                if (Conexao.isNomeDuplicado(e)) {
+                    JOptionPane.showMessageDialog(this,
+                            "Já existe outro sintoma cadastrado com o nome '" + dialog.getSintoma().getNome() + "'.",
+                            "Nome duplicado",
+                            JOptionPane.WARNING_MESSAGE);
+                } else {
+                    e.printStackTrace();
+                    JOptionPane.showMessageDialog(this,
+                            "Erro ao atualizar sintoma no banco: " + e.getMessage(),
+                            "Erro BD",
+                            JOptionPane.ERROR_MESSAGE);
+                }
+                // o dialog altera o objeto em memoria; recarrega para voltar ao que esta no banco
+                carregarDadosDoBanco();
+            }
         }
     }
-    
+
     private void excluirSintomaSelecionado() {
         int linhaSelecionada = tabela.getSelectedRow();
 
         if (linhaSelecionada == -1) {
-            JOptionPane.showMessageDialog(this, 
-                    "Selecione um sintoma na tabela para excluir.", 
-                    "Aviso", 
+            JOptionPane.showMessageDialog(this,
+                    "Selecione um sintoma na tabela para excluir.",
+                    "Aviso",
                     JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        Sintoma sintomaSelecionado = listaSintomasMock.get(linhaSelecionada);
+        Sintoma sintomaSelecionado = listaSintomasExibidos.get(linhaSelecionada);
 
         int opcao = JOptionPane.showConfirmDialog(
                 this,
@@ -274,52 +317,45 @@ public class SintomasListPanel extends JPanel {
         );
 
         if (opcao == JOptionPane.YES_OPTION) {
-            listaSintomasMock.remove(linhaSelecionada);
-            preencherTabela(listaSintomasMock);
+            try (Connection conn = Conexao.getConexao()) {
+                SintomaDAO dao = new SintomaDAO(conn);
+                dao.remover(sintomaSelecionado.getId());
+                LogAlteracoes.registrar(usuarioLogado, LogAlteracoes.EXCLUSAO, LogAlteracoes.TIPO_SINTOMA,
+                        sintomaSelecionado.getId(), sintomaSelecionado.getNome());
 
-            JOptionPane.showMessageDialog(this, 
-                    "Sintoma excluído com sucesso!", 
-                    "Sucesso", 
-                    JOptionPane.INFORMATION_MESSAGE);
+                carregarDadosDoBanco();
+                JOptionPane.showMessageDialog(this,
+                        "Sintoma excluído com sucesso!",
+                        "Sucesso",
+                        JOptionPane.INFORMATION_MESSAGE);
+            } catch (SQLException e) {
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(this,
+                        "Erro ao excluir sintoma no banco: " + e.getMessage(),
+                        "Erro BD",
+                        JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
 
-    private void carregarDadosMock() {
-        listaSintomasMock.clear();
-
-        // Sintoma 1
-        Sintoma s1 = new Sintoma();
-        s1.setId(1);
-        s1.setNome("Anemia");
-        s1.setDesc("Diminuição da quantidade de glóbulos vermelhos no sangue, causando fadiga e fraqueza.");
-
-        List<Receita> r1 = new ArrayList<>();
-        Receita rec1 = new Receita();
-        rec1.setTitulo("Refogado de Ora-pro-nóbis Rico em Ferro");
-        rec1.setPreparo("Refogue as folhas com bastante alho e azeite.");
-        r1.add(rec1);
-        s1.setReceitas_relacionadas(r1);
-
-        // Sintoma 2
-        Sintoma s2 = new Sintoma();
-        s2.setId(2);
-        s2.setNome("Irritação na Garganta");
-        s2.setDesc("Sensação de ardor, inflamação ou desconforto na região da faringe.");
-
-        List<Receita> r2 = new ArrayList<>();
-        Receita rec2 = new Receita();
-        rec2.setTitulo("Chá Suave de Peixinho-da-horta");
-        rec2.setPreparo("Infundir 3 folhas limpas em água fervente por 5 minutos.");
-        r2.add(rec2);
-        s2.setReceitas_relacionadas(r2);
-
-        listaSintomasMock.add(s1);
-        listaSintomasMock.add(s2);
-
-        preencherTabela(listaSintomasMock);
+    private void carregarDadosDoBanco() {
+        try (Connection conn = Conexao.getConexao()) {
+            SintomaDAO dao = new SintomaDAO(conn);
+            listaSintomasCache = dao.listar();
+            
+            // Se houver algo digitado no filtro, reaplica; caso contrário exibe tudo
+            filtrarSintomas();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Erro ao carregar sintomas do banco: " + e.getMessage(),
+                    "Erro BD",
+                    JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void preencherTabela(List<Sintoma> lista) {
+        listaSintomasExibidos = lista;
         tableModel.setRowCount(0);
         for (Sintoma s : lista) {
             tableModel.addRow(new Object[]{
@@ -333,12 +369,12 @@ public class SintomasListPanel extends JPanel {
     private void filtrarSintomas() {
         String termo = txtBusca.getText().toLowerCase().trim();
         if (termo.isEmpty()) {
-            preencherTabela(listaSintomasMock);
+            preencherTabela(listaSintomasCache);
             return;
         }
 
         List<Sintoma> filtrados = new ArrayList<>();
-        for (Sintoma s : listaSintomasMock) {
+        for (Sintoma s : listaSintomasCache) {
             if (s.getNome().toLowerCase().contains(termo) ||
                 (s.getDesc() != null && s.getDesc().toLowerCase().contains(termo))) {
                 filtrados.add(s);

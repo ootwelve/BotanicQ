@@ -1,27 +1,3 @@
-CREATE TABLE receita (
-    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    titulo VARCHAR(150) NOT NULL,
-    src_imagem TEXT,
-    descricao TEXT,
-    outros_ingredientes TEXT[],
-    preparo TEXT,
-    uso TEXT
-);
-
-CREATE TABLE panc (
-    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    src_imagem TEXT,
-    nome VARCHAR(150) NOT NULL,
-    descricao TEXT,
-    origem_nativa VARCHAR(150)
-);
-
-CREATE TABLE sintoma (
-    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    nome VARCHAR(150) NOT NULL,
-    descricao TEXT
-);
-
 CREATE TABLE usuario (
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     nome VARCHAR(150) NOT NULL,
@@ -29,6 +5,36 @@ CREATE TABLE usuario (
     acesso INTEGER,
     data DATE,
     obs TEXT
+);
+
+CREATE TABLE receita (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    titulo VARCHAR(150) NOT NULL,
+    src_imagem TEXT,
+    descricao TEXT,
+    outros_ingredientes TEXT[],
+    preparo TEXT,
+    uso TEXT,
+    ultimo_admin_id INTEGER REFERENCES usuario(id) ON DELETE SET NULL,
+    ultima_alteracao TIMESTAMP
+);
+
+CREATE TABLE panc (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    src_imagem TEXT,
+    nome VARCHAR(150) NOT NULL,
+    descricao TEXT,
+    origem_nativa VARCHAR(150),
+    ultimo_admin_id INTEGER REFERENCES usuario(id) ON DELETE SET NULL,
+    ultima_alteracao TIMESTAMP
+);
+
+CREATE TABLE sintoma (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    nome VARCHAR(150) NOT NULL,
+    descricao TEXT,
+    ultimo_admin_id INTEGER REFERENCES usuario(id) ON DELETE SET NULL,
+    ultima_alteracao TIMESTAMP
 );
 
 CREATE TABLE receita_panc (
@@ -75,3 +81,8 @@ CREATE TABLE panc_sintoma (
         REFERENCES sintoma(id)
         ON DELETE CASCADE
 );
+
+-- RNF14: nome unico (sem diferenciar maiusculas/minusculas nem espacos nas pontas)
+CREATE UNIQUE INDEX ux_panc_nome    ON panc    (LOWER(BTRIM(nome)));
+CREATE UNIQUE INDEX ux_receita_nome ON receita (LOWER(BTRIM(titulo)));
+CREATE UNIQUE INDEX ux_sintoma_nome ON sintoma (LOWER(BTRIM(nome)));

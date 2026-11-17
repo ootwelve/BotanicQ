@@ -1,5 +1,6 @@
 package telas;
 
+import negocio.AuditoriaUtil;
 import negocio.Receita;
 import negocio.Sintoma;
 
@@ -33,6 +34,8 @@ public class SintomaDetailPanel extends JPanel {
         secaoReceitas.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         pnlCorpo.add(cardInfo);
+        pnlCorpo.add(Box.createVerticalStrut(8));
+        pnlCorpo.add(AuditoriaUtil.criarRotulo(sintoma.getUltimo_admin(), sintoma.getUltima_alteracao())); // RF19
         pnlCorpo.add(Box.createVerticalStrut(25));
         pnlCorpo.add(secaoReceitas);
 
@@ -139,6 +142,7 @@ public class SintomaDetailPanel extends JPanel {
 
         JLabel lblNome = new JLabel(receita.getTitulo());
         lblNome.setFont(new Font("SansSerif", Font.BOLD, 14));
+        lblNome.setForeground(VERDE_TEXTO);
         lblNome.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JTextArea txtPreparo = new JTextArea("Modo de Preparo: " + receita.getPreparo());

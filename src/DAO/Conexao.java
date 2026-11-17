@@ -22,6 +22,14 @@ public class Conexao {
         return DriverManager.getConnection(URL, USUARIO, SENHA);
     }
 
+    /**
+     * RNF14: true quando o erro do banco foi uma violacao de unicidade
+     * (SQLState 23505), ou seja, ja existe um registro com aquele nome.
+     */
+    public static boolean isNomeDuplicado(SQLException e) {
+        return e != null && "23505".equals(e.getSQLState());
+    }
+
     public static void fecharConexao(Connection conexao) {
         if (conexao != null) {
             try {

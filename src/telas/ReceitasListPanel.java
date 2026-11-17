@@ -1,14 +1,19 @@
 package telas;
 
+import negocio.LogAlteracoes;
 import negocio.Receita;
+import negocio.Sintoma;
 import negocio.Usuario;
 import DAO.ReceitaDAO;
+import DAO.SintomaDAO;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.event.MouseEvent;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -21,14 +26,20 @@ public class ReceitasListPanel extends JPanel {
     private Usuario usuarioLogado;
 
     private JTextField txtBusca;
+    private JComboBox<Sintoma> cbSintoma;
+    private JLabel lblResultado;
+    private boolean atualizandoCombo = false;
+    private static final Sintoma TODOS_SINTOMAS = new Sintoma(0, "Todos os sintomas", null);
     private JPanel pnlGridCards;
-    private List<Receita> listaReceitasCache = new ArrayList<>(); // Armazena os dados atuais da tela
+    private List<Receita> listaReceitasCache = new ArrayList<>();
     
     private JPanel cardSelecionado = null;
     private Receita receitaSelecionada = null;
 
     private static final Color VERDE_TEXTO = new Color(34, 112, 62);
     private static final Color COR_SELECAO = new Color(200, 230, 201);
+    private static final Color CINZA_BG = new Color(248, 249, 250);
+    private static final Color BORDA_CINZA = new Color(220, 224, 230);
 
     public ReceitasListPanel(MainFrame parentFrame, Usuario usuario) {
         this.parentFrame = parentFrame;
@@ -40,8 +51,17 @@ public class ReceitasListPanel extends JPanel {
 
         add(criarTopo(), BorderLayout.NORTH);
         add(criarContainerGrid(), BorderLayout.CENTER);
+        add(criarRodapeFiltroSintoma(), BorderLayout.SOUTH);
 
-        // Carrega os dados reais do banco ao iniciar o painel
+        // sintomas podem ter sido criados/removidos em outra aba: atualiza a lista do filtro ao voltar
+        addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentShown(ComponentEvent e) {
+                recarregarSintomasFiltro();
+            }
+        });
+
+        recarregarSintomasFiltro();
         carregarDadosDoBanco();
     }
 
@@ -145,6 +165,109 @@ public class ReceitasListPanel extends JPanel {
         topoContainer.add(pnlAcoes);
 
         return topoContainer;
+    }
+
+    /** RF15: barra inferior com o filtro de receitas por sintoma de saude. */
+    private JPanel criarRodapeFiltroSintoma() {
+        JPanel barra = new JPanel(new BorderLayout(15, 0));
+        barra.setBackground(CINZA_BG);
+        barra.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(BORDA_CINZA, 1, true),
+                new EmptyBorder(10, 15, 10, 15)
+        ));
+
+        JPanel pnlEsquerda = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        pnlEsquerda.setOpaque(false);
+
+        JLabel lblSintoma = new JLabel("Filtrar por sintoma:");
+        lblSintoma.setFont(new Font("SansSerif", Font.BOLD, 13));
+
+        cbSintoma = new JComboBox<>();
+        cbSintoma.addItem(TODOS_SINTOMAS);
+        cbSintoma.setPreferredSize(new Dimension(280, 36));
+        cbSintoma.setToolTipText("Mostra apenas as receitas indicadas para o sintoma escolhido");
+        cbSintoma.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                                                          boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value instanceof Sintoma) {
+                    setText(((Sintoma) value).getNome());
+                }
+                return this;
+            }
+        });
+        cbSintoma.addActionListener(e -> {
+            if (!atualizandoCombo) {
+                carregarDadosDoBanco();
+            }
+        });
+
+        JButton btnLimpar = new JButton("Limpar filtros");
+        btnLimpar.setPreferredSize(new Dimension(130, 36));
+        btnLimpar.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnLimpar.addActionListener(e -> limparFiltros());
+
+        pnlEsquerda.add(lblSintoma);
+        pnlEsquerda.add(cbSintoma);
+        pnlEsquerda.add(btnLimpar);
+
+        lblResultado = new JLabel(" ");
+        lblResultado.setFont(new Font("SansSerif", Font.ITALIC, 12));
+        lblResultado.setForeground(Color.GRAY);
+
+        barra.add(pnlEsquerda, BorderLayout.WEST);
+        barra.add(lblResultado, BorderLayout.EAST);
+
+        return barra;
+    }
+
+    /**
+     * Recarrega os sintomas do combo mantendo a escolha atual.
+     * Se o sintoma escolhido deixou de existir, volta para "Todos" e recarrega as receitas.
+     */
+    private void recarregarSintomasFiltro() {
+        Sintoma atual = (Sintoma) cbSintoma.getSelectedItem();
+        int idAtual = (atual != null) ? atual.getId() : 0;
+
+        List<Sintoma> sintomas;
+        try (Connection conn = DAO.Conexao.getConexao()) {
+            sintomas = new SintomaDAO(conn).listar();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Erro ao carregar sintomas do filtro: " + e.getMessage(),
+                    "Erro", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        Sintoma novaSelecao = TODOS_SINTOMAS;
+        atualizandoCombo = true;
+        try {
+            cbSintoma.removeAllItems();
+            cbSintoma.addItem(TODOS_SINTOMAS);
+            for (Sintoma s : sintomas) {
+                cbSintoma.addItem(s);
+                if (s.getId() == idAtual) {
+                    novaSelecao = s;
+                }
+            }
+            cbSintoma.setSelectedItem(novaSelecao);
+        } finally {
+            atualizandoCombo = false;
+        }
+
+        if (novaSelecao.getId() != idAtual) {
+            carregarDadosDoBanco();
+        }
+    }
+
+    private void limparFiltros() {
+        txtBusca.setText("");
+        if (cbSintoma.getSelectedItem() != TODOS_SINTOMAS) {
+            cbSintoma.setSelectedItem(TODOS_SINTOMAS); // dispara o recarregamento
+        } else {
+            filtrarReceitas();
+        }
     }
 
     private JComponent criarContainerGrid() {
@@ -262,14 +385,21 @@ public class ReceitasListPanel extends JPanel {
             
             try (Connection conn = DAO.Conexao.getConexao()) {
                 ReceitaDAO dao = new ReceitaDAO(conn);
-                dao.cadastrar(novaReceita); // Salva de verdade no PostgreSQL!
+                dao.cadastrar(novaReceita, usuarioLogado.getId());
+                LogAlteracoes.registrar(usuarioLogado, LogAlteracoes.CADASTRO, LogAlteracoes.TIPO_RECEITA,
+                        novaReceita.getId(), novaReceita.getTitulo());
                 
-                carregarDadosDoBanco(); // Recarrega do banco para atualizar a tela
+                carregarDadosDoBanco();
                 JOptionPane.showMessageDialog(this, "Receita cadastrada com sucesso!");
             } catch (SQLException e) {
-                e.printStackTrace();
-                JOptionPane.showMessageDialog(this, "Erro ao cadastrar receita no banco: " + e.getMessage(), 
-                        "Erro", JOptionPane.ERROR_MESSAGE);
+                if (DAO.Conexao.isNomeDuplicado(e)) {
+                    JOptionPane.showMessageDialog(this, "Já existe uma receita cadastrada com o título '" + novaReceita.getTitulo() + "'.",
+                            "Título duplicado", JOptionPane.WARNING_MESSAGE);
+                } else {
+                    e.printStackTrace();
+                    JOptionPane.showMessageDialog(this, "Erro ao cadastrar receita no banco: " + e.getMessage(), 
+                            "Erro", JOptionPane.ERROR_MESSAGE);
+                }
             }
         }
     }
@@ -286,14 +416,23 @@ public class ReceitasListPanel extends JPanel {
         if (dialog.isConfirmado()) {
             try (Connection conn = DAO.Conexao.getConexao()) {
                 ReceitaDAO dao = new ReceitaDAO(conn);
-                dao.editar(receitaSelecionada); // Atualiza de verdade no PostgreSQL!
+                dao.editar(receitaSelecionada, usuarioLogado.getId());
+                LogAlteracoes.registrar(usuarioLogado, LogAlteracoes.EDICAO, LogAlteracoes.TIPO_RECEITA,
+                        receitaSelecionada.getId(), receitaSelecionada.getTitulo());
                 
-                carregarDadosDoBanco(); // Recarrega do banco
+                carregarDadosDoBanco();
                 JOptionPane.showMessageDialog(this, "Receita atualizada com sucesso!");
             } catch (SQLException e) {
-                e.printStackTrace();
-                JOptionPane.showMessageDialog(this, "Erro ao atualizar receita no banco: " + e.getMessage(), 
-                        "Erro", JOptionPane.ERROR_MESSAGE);
+                if (DAO.Conexao.isNomeDuplicado(e)) {
+                    JOptionPane.showMessageDialog(this, "Já existe outra receita cadastrada com o título '" + receitaSelecionada.getTitulo() + "'.",
+                            "Título duplicado", JOptionPane.WARNING_MESSAGE);
+                } else {
+                    e.printStackTrace();
+                    JOptionPane.showMessageDialog(this, "Erro ao atualizar receita no banco: " + e.getMessage(), 
+                            "Erro", JOptionPane.ERROR_MESSAGE);
+                }
+                // o dialog altera o objeto em memoria; recarrega para voltar ao que esta no banco
+                carregarDadosDoBanco();
             }
         }
     }
@@ -315,9 +454,11 @@ public class ReceitasListPanel extends JPanel {
         if (opcao == JOptionPane.YES_OPTION) {
             try (Connection conn = DAO.Conexao.getConexao()) {
                 ReceitaDAO dao = new ReceitaDAO(conn);
-                dao.remover(receitaSelecionada.getId()); // Remove do PostgreSQL!
+                dao.remover(receitaSelecionada.getId());
+                LogAlteracoes.registrar(usuarioLogado, LogAlteracoes.EXCLUSAO, LogAlteracoes.TIPO_RECEITA,
+                        receitaSelecionada.getId(), receitaSelecionada.getTitulo());
                 
-                carregarDadosDoBanco(); // Recarrega do banco
+                carregarDadosDoBanco();
                 JOptionPane.showMessageDialog(this, "Receita excluída com sucesso!");
             } catch (SQLException e) {
                 e.printStackTrace();
@@ -331,8 +472,13 @@ public class ReceitasListPanel extends JPanel {
         try (Connection conn = DAO.Conexao.getConexao()) {
             ReceitaDAO receitaDAO = new ReceitaDAO(conn);
             
-            listaReceitasCache = receitaDAO.listar(); // Puxa do banco real
-            renderizarGrid(listaReceitasCache);
+            Sintoma filtro = (Sintoma) cbSintoma.getSelectedItem();
+            if (filtro == null || filtro.getId() == 0) {
+                listaReceitasCache = receitaDAO.listar();
+            } else {
+                listaReceitasCache = receitaDAO.listarPorSintoma(filtro.getId()); // RF15
+            }
+            filtrarReceitas();
             
         } catch (SQLException e) {
             e.printStackTrace();
@@ -343,17 +489,24 @@ public class ReceitasListPanel extends JPanel {
 
     private void filtrarReceitas() {
         String termo = txtBusca.getText().toLowerCase().trim();
-        if (termo.isEmpty()) {
-            renderizarGrid(listaReceitasCache);
-            return;
-        }
 
-        List<Receita> filtradas = new ArrayList<>();
-        for (Receita r : listaReceitasCache) {
-            if (r.getTitulo().toLowerCase().contains(termo)) {
-                filtradas.add(r);
+        List<Receita> exibidas;
+        if (termo.isEmpty()) {
+            exibidas = listaReceitasCache;
+        } else {
+            exibidas = new ArrayList<>();
+            for (Receita r : listaReceitasCache) {
+                if (r.getTitulo().toLowerCase().contains(termo)) {
+                    exibidas.add(r);
+                }
             }
         }
-        renderizarGrid(filtradas);
+        renderizarGrid(exibidas);
+
+        if (exibidas.isEmpty()) {
+            lblResultado.setText("Nenhuma receita encontrada para os filtros escolhidos.");
+        } else {
+            lblResultado.setText(exibidas.size() + (exibidas.size() == 1 ? " receita encontrada" : " receitas encontradas"));
+        }
     }
 }

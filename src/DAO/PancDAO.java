@@ -1,6 +1,7 @@
 package DAO;
 
 import negocio.PANC;
+import negocio.Receita;
 import negocio.Sintoma;
 
 import java.sql.*;
@@ -10,18 +11,26 @@ import java.util.List;
 public class PancDAO {
     private Connection conexao;
 
+    // RF19: traz junto o nome do administrador que fez a ultima alteracao
+    private static final String SELECT_BASE =
+            "SELECT p.*, u.nome AS ultimo_admin_nome FROM panc p " +
+            "LEFT JOIN usuario u ON u.id = p.ultimo_admin_id ";
+
     public PancDAO(Connection conexao) {
         this.conexao = conexao;
     }
 
-    public void cadastrar(PANC panc) throws SQLException {
-        String sql = "INSERT INTO panc (src_imagem, nome, desc, origem_nativa) VALUES (?, ?, ?, ?) RETURNING id";
+    /** @param adminId id do administrador logado (RF19) */
+    public void cadastrar(PANC panc, int adminId) throws SQLException {
+        String sql = "INSERT INTO panc (src_imagem, nome, descricao, origem_nativa, ultimo_admin_id, ultima_alteracao) " +
+                     "VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP) RETURNING id";
 
         try (PreparedStatement stmt = conexao.prepareStatement(sql)) {
             stmt.setString(1, panc.getSrc_imagem());
             stmt.setString(2, panc.getNome());
             stmt.setString(3, panc.getDesc());
             stmt.setString(4, panc.getOrigem_nativa());
+            stmt.setInt(5, adminId);
 
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
@@ -46,7 +55,7 @@ public class PancDAO {
             stmt.executeBatch();
         }
     }
-    
+
     public void removerSintomaEspecifico(int pancId, int sintomaId) throws SQLException {
         String sql = "DELETE FROM panc_sintoma WHERE panc_id = ? AND sintoma_id = ?";
         try (PreparedStatement stmt = conexao.prepareStatement(sql)) {
@@ -64,8 +73,23 @@ public class PancDAO {
         }
     }
 
+    private PANC mapear(ResultSet rs) throws SQLException {
+        PANC panc = new PANC();
+        panc.setId(rs.getInt("id"));
+        panc.setSrc_imagem(rs.getString("src_imagem"));
+        panc.setNome(rs.getString("nome"));
+        panc.setDesc(rs.getString("descricao"));
+        panc.setOrigem_nativa(rs.getString("origem_nativa"));
+        panc.setUltimo_admin(rs.getString("ultimo_admin_nome"));
+        Timestamp ts = rs.getTimestamp("ultima_alteracao");
+        if (ts != null) {
+            panc.setUltima_alteracao(ts.toLocalDateTime());
+        }
+        return panc;
+    }
+
     public PANC buscarPorId(int id) throws SQLException {
-        String sql = "SELECT * FROM panc WHERE id = ?";
+        String sql = SELECT_BASE + "WHERE p.id = ?";
         PANC panc = null;
 
         try (PreparedStatement stmt = conexao.prepareStatement(sql)) {
@@ -73,14 +97,9 @@ public class PancDAO {
             ResultSet rs = stmt.executeQuery();
 
             if (rs.next()) {
-                panc = new PANC();
-                panc.setId(rs.getInt("id"));
-                panc.setSrc_imagem(rs.getString("src_imagem"));
-                panc.setNome(rs.getString("nome"));
-                panc.setDesc(rs.getString("desc"));
-                panc.setOrigem_nativa(rs.getString("origem_nativa"));
-
+                panc = mapear(rs);
                 panc.setSintomas_relacionados(carregarSintomasDaPanc(id));
+                panc.setReceitas_relacionadas(carregarReceitasDaPanc(id));
             }
         }
         return panc;
@@ -88,19 +107,15 @@ public class PancDAO {
 
     public List<PANC> listarTodas() throws SQLException {
         List<PANC> lista = new ArrayList<>();
-        String sql = "SELECT * FROM panc ORDER BY id";
+        String sql = SELECT_BASE + "ORDER BY p.id";
 
         try (PreparedStatement stmt = conexao.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
 
             while (rs.next()) {
-                PANC panc = new PANC();
-                panc.setId(rs.getInt("id"));
-                panc.setSrc_imagem(rs.getString("src_imagem"));
-                panc.setNome(rs.getString("nome"));
-                panc.setDesc(rs.getString("desc"));
-                panc.setOrigem_nativa(rs.getString("origem_nativa"));
+                PANC panc = mapear(rs);
                 panc.setSintomas_relacionados(carregarSintomasDaPanc(panc.getId()));
+                panc.setReceitas_relacionadas(carregarReceitasDaPanc(panc.getId()));
 
                 lista.add(panc);
             }
@@ -108,12 +123,14 @@ public class PancDAO {
         return lista;
     }
 
+    /** RF8: busca PANCs pelo nome (ou descricao) de um sintoma relacionado. */
     public List<PANC> buscarPorSintoma(String termoSintoma) throws SQLException {
         List<PANC> lista = new ArrayList<>();
-        String sql = "SELECT DISTINCT p.* FROM panc p " +
+        String sql = "SELECT DISTINCT p.*, u.nome AS ultimo_admin_nome FROM panc p " +
                      "JOIN panc_sintoma ps ON p.id = ps.panc_id " +
                      "JOIN sintoma s ON s.id = ps.sintoma_id " +
-                     "WHERE LOWER(s.nome) LIKE LOWER(?) OR LOWER(s.desc) LIKE LOWER(?) " +
+                     "LEFT JOIN usuario u ON u.id = p.ultimo_admin_id " +
+                     "WHERE LOWER(s.nome) LIKE LOWER(?) OR LOWER(s.descricao) LIKE LOWER(?) " +
                      "ORDER BY p.id";
 
         try (PreparedStatement stmt = conexao.prepareStatement(sql)) {
@@ -123,13 +140,11 @@ public class PancDAO {
 
             ResultSet rs = stmt.executeQuery();
             while (rs.next()) {
-                PANC panc = new PANC();
-                panc.setId(rs.getInt("id"));
-                panc.setSrc_imagem(rs.getString("src_imagem"));
-                panc.setNome(rs.getString("nome"));
-                panc.setDesc(rs.getString("desc"));
-                panc.setOrigem_nativa(rs.getString("origem_nativa"));
+                PANC panc = mapear(rs);
                 panc.setSintomas_relacionados(carregarSintomasDaPanc(panc.getId()));
+                // antes faltava carregar as receitas: a tela de detalhes
+                // aparecia sem receitas quando se chegava nela por esta busca
+                panc.setReceitas_relacionadas(carregarReceitasDaPanc(panc.getId()));
 
                 lista.add(panc);
             }
@@ -150,22 +165,48 @@ public class PancDAO {
                 Sintoma s = new Sintoma();
                 s.setId(rs.getInt("id"));
                 s.setNome(rs.getString("nome"));
-                s.setDesc(rs.getString("desc"));
+                s.setDesc(rs.getString("descricao"));
                 sintomas.add(s);
             }
         }
         return sintomas;
     }
 
-    public void editar(PANC panc) throws SQLException {
-        String sql = "UPDATE panc SET src_imagem = ?, nome = ?, desc = ?, origem_nativa = ? WHERE id = ?";
+    private List<Receita> carregarReceitasDaPanc(int pancId) throws SQLException {
+        List<Receita> receitas = new ArrayList<>();
+        String sql = "SELECT r.* FROM receita r " +
+                     "JOIN receita_panc rp ON r.id = rp.receita_id " +
+                     "WHERE rp.panc_id = ?";
+
+        try (PreparedStatement stmt = conexao.prepareStatement(sql)) {
+            stmt.setInt(1, pancId);
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                Receita r = new Receita();
+                r.setId(rs.getInt("id"));
+                r.setTitulo(rs.getString("titulo"));
+                r.setSrc_imagem(rs.getString("src_imagem"));
+                r.setDesc(rs.getString("descricao"));
+                r.setPreparo(rs.getString("preparo"));
+                r.setUso(rs.getString("uso"));
+                receitas.add(r);
+            }
+        }
+        return receitas;
+    }
+
+    /** @param adminId id do administrador logado (RF19) */
+    public void editar(PANC panc, int adminId) throws SQLException {
+        String sql = "UPDATE panc SET src_imagem = ?, nome = ?, descricao = ?, origem_nativa = ?, " +
+                     "ultimo_admin_id = ?, ultima_alteracao = CURRENT_TIMESTAMP WHERE id = ?";
 
         try (PreparedStatement stmt = conexao.prepareStatement(sql)) {
             stmt.setString(1, panc.getSrc_imagem());
             stmt.setString(2, panc.getNome());
             stmt.setString(3, panc.getDesc());
             stmt.setString(4, panc.getOrigem_nativa());
-            stmt.setInt(5, panc.getId());
+            stmt.setInt(5, adminId);
+            stmt.setInt(6, panc.getId());
             stmt.executeUpdate();
         }
 
@@ -175,7 +216,7 @@ public class PancDAO {
     }
 
     public void remover(int id) throws SQLException {
-    	removerTodosSintomasRelacionados(id);
+        removerTodosSintomasRelacionados(id);
 
         String sql = "DELETE FROM panc WHERE id = ?";
         try (PreparedStatement stmt = conexao.prepareStatement(sql)) {

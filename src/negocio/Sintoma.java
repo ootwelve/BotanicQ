@@ -1,5 +1,6 @@
 package negocio;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,6 +9,8 @@ public class Sintoma {
     private String nome;
     private String desc;
     private List<Receita> receitas_relacionadas;
+    private String ultimo_admin;
+    private LocalDateTime ultima_alteracao;
 
     public Sintoma() {
         this.receitas_relacionadas = new ArrayList<>();
@@ -31,4 +34,10 @@ public class Sintoma {
 
     public List<Receita> getReceitas_relacionadas() { return receitas_relacionadas; }
     public void setReceitas_relacionadas(List<Receita> receitas_relacionadas) { this.receitas_relacionadas = receitas_relacionadas; }
+
+    public String getUltimo_admin() { return ultimo_admin; }
+    public void setUltimo_admin(String ultimo_admin) { this.ultimo_admin = ultimo_admin; }
+
+    public LocalDateTime getUltima_alteracao() { return ultima_alteracao; }
+    public void setUltima_alteracao(LocalDateTime ultima_alteracao) { this.ultima_alteracao = ultima_alteracao; }
 }

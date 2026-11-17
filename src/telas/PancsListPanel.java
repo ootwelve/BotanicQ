@@ -1,7 +1,9 @@
 package telas;
 
+import DAO.Conexao;
+import DAO.PancDAO;
+import negocio.LogAlteracoes;
 import negocio.PANC;
-import negocio.Receita;
 import negocio.Sintoma;
 import negocio.Usuario;
 
@@ -10,6 +12,8 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import java.awt.*;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,7 +25,7 @@ public class PancsListPanel extends JPanel {
     private Usuario usuarioLogado;
     private MainFrame parentFrame;
 
-    private List<PANC> listaPancsMock = new ArrayList<>();
+    private List<PANC> listaPancsAtual = new ArrayList<>();
 
     public PancsListPanel(MainFrame parentFrame, Usuario usuario) {
         this.parentFrame = parentFrame;
@@ -34,7 +38,7 @@ public class PancsListPanel extends JPanel {
         add(criarTopo(), BorderLayout.NORTH);
         add(criarTabela(), BorderLayout.CENTER);
 
-        carregarDadosMock();
+        carregarDadosDoBanco();
     }
 
     private JPanel criarTopo() {
@@ -67,9 +71,8 @@ public class PancsListPanel extends JPanel {
         JButton btnBuscar = new JButton("Buscar");
         btnBuscar.setPreferredSize(new Dimension(100, 36));
         btnBuscar.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-        btnBuscar.addActionListener(e -> buscarPorSintomaMock());
-        txtBuscaSintoma.addActionListener(e -> buscarPorSintomaMock());
+        btnBuscar.addActionListener(e -> buscarPorSintomaBD());
+        txtBuscaSintoma.addActionListener(e -> buscarPorSintomaBD());
 
         JButton btnDetalhes = new JButton("Detalhes");
         btnDetalhes.setFont(new Font("SansSerif", Font.BOLD, 13));
@@ -80,13 +83,12 @@ public class PancsListPanel extends JPanel {
         btnDetalhes.setBorderPainted(false);
         btnDetalhes.setOpaque(true);
         btnDetalhes.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
         btnDetalhes.addActionListener(e -> abrirDetalhesSelecionado());
 
         pnlEsquerda.add(lblSintoma);
         pnlEsquerda.add(txtBuscaSintoma);
         pnlEsquerda.add(btnBuscar);
-        pnlEsquerda.add(Box.createHorizontalStrut(10)); // Espaçamento discreto
+        pnlEsquerda.add(Box.createHorizontalStrut(10));
         pnlEsquerda.add(btnDetalhes);
 
         JPanel pnlBotoesAdmin = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
@@ -94,7 +96,6 @@ public class PancsListPanel extends JPanel {
         pnlBotoesAdmin.setBorder(BorderFactory.createEmptyBorder(0, 20, 0, 0));
 
         if (usuarioLogado != null && usuarioLogado.getAcesso() == 1) {
-            
             JButton btnNovo = new JButton("+ Cadastrar PANC");
             btnNovo.setFont(new Font("SansSerif", Font.BOLD, 13));
             btnNovo.setPreferredSize(new Dimension(160, 36));
@@ -104,19 +105,7 @@ public class PancsListPanel extends JPanel {
             btnNovo.setBorderPainted(false);
             btnNovo.setOpaque(true);
             btnNovo.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-            btnNovo.addActionListener(e -> {
-                PancCadastroDialog dialog = new PancCadastroDialog(parentFrame);
-                dialog.setVisible(true);
-
-                if (dialog.isConfirmado()) {
-                    PANC novaPanc = dialog.getPanc();
-                    novaPanc.setId(listaPancsMock.size() + 1);
-                    listaPancsMock.add(novaPanc);
-                    preencherTabela(listaPancsMock);
-                    JOptionPane.showMessageDialog(this, "PANC cadastrada com sucesso!");
-                }
-            });
+            btnNovo.addActionListener(e -> cadastrarNovaPanc());
 
             JButton btnEditar = new JButton("✏️ Editar");
             btnEditar.setFont(new Font("SansSerif", Font.BOLD, 13));
@@ -127,7 +116,6 @@ public class PancsListPanel extends JPanel {
             btnEditar.setBorderPainted(false);
             btnEditar.setOpaque(true);
             btnEditar.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
             btnEditar.addActionListener(e -> editarPancSelecionada());
 
             JButton btnExcluir = new JButton("🗑️ Excluir");
@@ -139,7 +127,6 @@ public class PancsListPanel extends JPanel {
             btnExcluir.setBorderPainted(false);
             btnExcluir.setOpaque(true);
             btnExcluir.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
             btnExcluir.addActionListener(e -> excluirPancSelecionada());
 
             pnlBotoesAdmin.add(btnNovo);
@@ -173,6 +160,7 @@ public class PancsListPanel extends JPanel {
         tabela.setSelectionForeground(Color.BLACK);
         tabela.setShowVerticalLines(false);
         tabela.setGridColor(new Color(230, 230, 230));
+        tabela.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
         JTableHeader header = tabela.getTableHeader();
         header.setPreferredSize(new Dimension(0, 38));
@@ -201,8 +189,8 @@ public class PancsListPanel extends JPanel {
 
         tabela.getColumnModel().getColumn(0).setPreferredWidth(60);
         tabela.getColumnModel().getColumn(0).setMaxWidth(80);
-        tabela.getColumnModel().getColumn(1).setPreferredWidth(30);
-        tabela.getColumnModel().getColumn(2).setPreferredWidth(30);
+        tabela.getColumnModel().getColumn(1).setPreferredWidth(150);
+        tabela.getColumnModel().getColumn(2).setPreferredWidth(130);
 
         tabela.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
@@ -219,45 +207,83 @@ public class PancsListPanel extends JPanel {
 
         return scrollPane;
     }
-    
+
     private void abrirDetalhesSelecionado() {
         int linha = tabela.getSelectedRow();
         if (linha != -1) {
-            PANC PancSelecionada = listaPancsMock.get(linha);
-            parentFrame.exibirDetalhesPanc(PancSelecionada);
+            PANC pancSelecionada = listaPancsAtual.get(linha);
+            parentFrame.exibirDetalhesPanc(pancSelecionada);
         } else {
             JOptionPane.showMessageDialog(this,
-                    "Selecione um sintoma para ver os detalhes.",
+                    "Selecione uma PANC para ver os detalhes.",
                     "Aviso",
                     JOptionPane.WARNING_MESSAGE);
         }
     }
-    
+
+    private void cadastrarNovaPanc() {
+        PancCadastroDialog dialog = new PancCadastroDialog(parentFrame, null);
+        dialog.setVisible(true);
+
+        if (dialog.isConfirmado()) {
+            try (Connection conn = Conexao.getConexao()) {
+                PancDAO dao = new PancDAO(conn);
+                dao.cadastrar(dialog.getPanc(), usuarioLogado.getId());
+                LogAlteracoes.registrar(usuarioLogado, LogAlteracoes.CADASTRO, LogAlteracoes.TIPO_PANC,
+                        dialog.getPanc().getId(), dialog.getPanc().getNome());
+                JOptionPane.showMessageDialog(this, "PANC cadastrada com sucesso!");
+                carregarDadosDoBanco();
+            } catch (SQLException e) {
+                if (Conexao.isNomeDuplicado(e)) {
+                    JOptionPane.showMessageDialog(this, "Já existe uma PANC cadastrada com o nome '" + dialog.getPanc().getNome() + "'.", "Nome duplicado", JOptionPane.WARNING_MESSAGE);
+                } else {
+                    e.printStackTrace();
+                    JOptionPane.showMessageDialog(this, "Erro ao cadastrar PANC: " + e.getMessage(), "Erro BD", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        }
+    }
+
     private void editarPancSelecionada() {
         int linhaSelecionada = tabela.getSelectedRow();
-
         if (linhaSelecionada == -1) {
             JOptionPane.showMessageDialog(this, "Selecione uma PANC na tabela para editar.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        PANC pancSelecionada = listaPancsMock.get(linhaSelecionada);
+        PANC pancSelecionada = listaPancsAtual.get(linhaSelecionada);
         PancCadastroDialog dialog = new PancCadastroDialog(parentFrame, pancSelecionada);
         dialog.setVisible(true);
+
+        if (dialog.isConfirmado()) {
+            try (Connection conn = Conexao.getConexao()) {
+                PancDAO dao = new PancDAO(conn);
+                dao.editar(dialog.getPanc(), usuarioLogado.getId());
+                LogAlteracoes.registrar(usuarioLogado, LogAlteracoes.EDICAO, LogAlteracoes.TIPO_PANC,
+                        dialog.getPanc().getId(), dialog.getPanc().getNome());
+                JOptionPane.showMessageDialog(this, "PANC atualizada com sucesso!");
+                carregarDadosDoBanco();
+            } catch (SQLException e) {
+                if (Conexao.isNomeDuplicado(e)) {
+                    JOptionPane.showMessageDialog(this, "Já existe outra PANC cadastrada com o nome '" + dialog.getPanc().getNome() + "'.", "Nome duplicado", JOptionPane.WARNING_MESSAGE);
+                } else {
+                    e.printStackTrace();
+                    JOptionPane.showMessageDialog(this, "Erro ao atualizar PANC: " + e.getMessage(), "Erro BD", JOptionPane.ERROR_MESSAGE);
+                }
+                // o dialog altera o objeto em memoria; recarrega para voltar ao que esta no banco
+                carregarDadosDoBanco();
+            }
+        }
     }
-    
+
     private void excluirPancSelecionada() {
         int linhaSelecionada = tabela.getSelectedRow();
-
         if (linhaSelecionada == -1) {
-            JOptionPane.showMessageDialog(this, 
-                    "Selecione uma PANC na tabela para excluir.", 
-                    "Aviso", 
-                    JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Selecione uma PANC na tabela para excluir.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        PANC pancSelecionada = listaPancsMock.get(linhaSelecionada);
+        PANC pancSelecionada = listaPancsAtual.get(linhaSelecionada);
 
         int opcao = JOptionPane.showConfirmDialog(
                 this,
@@ -268,93 +294,49 @@ public class PancsListPanel extends JPanel {
         );
 
         if (opcao == JOptionPane.YES_OPTION) {
-            listaPancsMock.remove(linhaSelecionada);
-            preencherTabela(listaPancsMock);
-
-            JOptionPane.showMessageDialog(this, 
-                    "PANC excluída com sucesso!", 
-                    "Sucesso", 
-                    JOptionPane.INFORMATION_MESSAGE);
+            try (Connection conn = Conexao.getConexao()) {
+                PancDAO dao = new PancDAO(conn);
+                dao.remover(pancSelecionada.getId());
+                LogAlteracoes.registrar(usuarioLogado, LogAlteracoes.EXCLUSAO, LogAlteracoes.TIPO_PANC,
+                        pancSelecionada.getId(), pancSelecionada.getNome());
+                JOptionPane.showMessageDialog(this, "PANC excluída com sucesso!");
+                carregarDadosDoBanco();
+            } catch (SQLException e) {
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(this, "Erro ao excluir PANC: " + e.getMessage(), "Erro BD", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
 
-    private void carregarDadosMock() {
-        listaPancsMock.clear();
-
-        // PANC 1
-        PANC p1 = new PANC();
-        p1.setId(1);
-        p1.setNome("Ora-pro-nóbis");
-        p1.setOrigem_nativa("Cerrado Brasileiro");
-        p1.setDesc("Folhosa rica em proteínas e fibras.");
-        p1.setSrc_imagem("C:/Users/henri/Downloads/carro.jpg");
-        
-        List<Sintoma> s1 = new ArrayList<>();
-        Sintoma sint1 = new Sintoma(); sint1.setNome("Anemia"); s1.add(sint1);
-        Sintoma sint2 = new Sintoma(); sint2.setNome("Inflamação"); s1.add(sint2);
-        p1.setSintomas_relacionados(s1);
-        
-        List<Receita> r1 = new ArrayList<>();
-        Receita rec1 = new Receita();
-        rec1.setTitulo("Refogado de Ora-pro-nóbis");
-        rec1.setPreparo("Refogue as folhas rasgadas com alho e azeite por 2 minutos.");
-        r1.add(rec1);
-        p1.setReceitas_relacionadas(r1);
-
-        // PANC 2
-        PANC p2 = new PANC();
-        p2.setId(2);
-        p2.setNome("Peixinho-da-horta");
-        p2.setOrigem_nativa("Região Sul");
-        p2.setDesc("Planta empanada muito saborosa.");
-        p2.setSrc_imagem("peixinho.jpg");
-        
-        List<Sintoma> s2 = new ArrayList<>();
-        Sintoma sint3 = new Sintoma(); sint3.setNome("Tosse"); s2.add(sint3);
-        Sintoma sint4 = new Sintoma(); sint4.setNome("Irritação na Garganta"); s2.add(sint4);
-        p2.setSintomas_relacionados(s2);
-        
-        List<Receita> r2 = new ArrayList<>();
-        Receita rec2 = new Receita();
-        rec2.setTitulo("Refogado Tradicional de Peixinho-da-horta");
-        rec2.setPreparo("Lave bem as folhas, refogue com alho, azeite e uma pitada de sal por 3 minutos.");
-        r2.add(rec2);
-
-        Receita rec3 = new Receita();
-        rec3.setTitulo("Suco Verde Energético com Peixinho-da-horta");
-        rec3.setPreparo("Bata as folhas no liquidificador com suco de 2 limões, água bem gelada e adoce a gosto.");
-        r2.add(rec3);
-
-        p2.setReceitas_relacionadas(r2);
-
-        listaPancsMock.add(p1);
-        listaPancsMock.add(p2);
-
-        preencherTabela(listaPancsMock);
+    private void carregarDadosDoBanco() {
+        try (Connection conn = Conexao.getConexao()) {
+            PancDAO dao = new PancDAO(conn);
+            listaPancsAtual = dao.listarTodas();
+            preencherTabela(listaPancsAtual);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Erro ao carregar PANCs do banco: " + e.getMessage(), "Erro BD", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
-    private void buscarPorSintomaMock() {
+    private void buscarPorSintomaBD() {
         String termo = txtBuscaSintoma.getText().trim();
         if (termo.isEmpty()) {
-            preencherTabela(listaPancsMock);
+            carregarDadosDoBanco();
             return;
         }
 
-        List<PANC> filtradas = new ArrayList<>();
-        for (PANC p : listaPancsMock) {
-            if (p.getSintomas_relacionados() != null) {
-                for (Sintoma s : p.getSintomas_relacionados()) {
-                    if (s.getNome().toLowerCase().contains(termo.toLowerCase())) {
-                        filtradas.add(p);
-                        break;
-                    }
-                }
-            }
-        }
+        try (Connection conn = Conexao.getConexao()) {
+            PancDAO dao = new PancDAO(conn);
+            listaPancsAtual = dao.buscarPorSintoma(termo);
+            preencherTabela(listaPancsAtual);
 
-        preencherTabela(filtradas);
-        if (filtradas.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Nenhuma PANC encontrada para o sintoma: " + termo);
+            if (listaPancsAtual.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Nenhuma PANC encontrada para o sintoma: " + termo);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Erro ao buscar PANCs: " + e.getMessage(), "Erro BD", JOptionPane.ERROR_MESSAGE);
         }
     }
 

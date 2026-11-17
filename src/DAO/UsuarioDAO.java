@@ -1,7 +1,10 @@
 package DAO;
 
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 import negocio.Usuario;
+import negocio.CriptografiaUtil;
 
 public class UsuarioDAO {
     private Connection conexao;
@@ -15,7 +18,7 @@ public class UsuarioDAO {
 
         try (PreparedStatement stmt = conexao.prepareStatement(sql)) {
             stmt.setString(1, usuario.getNome());
-            stmt.setString(2, usuario.getSenha());
+            stmt.setString(2, CriptografiaUtil.criptografarSenha(usuario.getSenha()));
             stmt.setInt(3, usuario.getAcesso());
             stmt.setDate(4, Date.valueOf(usuario.getData()));
             stmt.setString(5, usuario.getObs());
@@ -26,12 +29,28 @@ public class UsuarioDAO {
             }
         }
     }
+    
+    public List<Usuario> listar() throws SQLException {
+        List<Usuario> lista = new ArrayList<>();
+        String sql = "SELECT * FROM usuario ORDER BY id";
+        try (PreparedStatement stmt = conexao.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                Usuario u = new Usuario();
+                u.setId(rs.getInt("id"));
+                u.setNome(rs.getString("nome"));
+                u.setAcesso(rs.getInt("acesso"));
+                lista.add(u);
+            }
+        }
+        return lista;
+    }
 
     public void alterarSenha(int idUsuario, String novaSenha) throws SQLException {
         String sql = "UPDATE usuario SET senha = ? WHERE id = ?";
 
         try (PreparedStatement stmt = conexao.prepareStatement(sql)) {
-            stmt.setString(1, novaSenha);
+            stmt.setString(1, CriptografiaUtil.criptografarSenha(novaSenha));
             stmt.setInt(2, idUsuario);
             stmt.executeUpdate();
         }
@@ -51,11 +70,13 @@ public class UsuarioDAO {
     }
     
     public Usuario autenticar(String nome, String senha) throws SQLException {
+        String senhaCriptografada = CriptografiaUtil.criptografarSenha(senha);
+        
         String sql = "SELECT * FROM usuario WHERE nome = ? AND senha = ?";
 
         try (PreparedStatement stmt = conexao.prepareStatement(sql)) {
             stmt.setString(1, nome);
-            stmt.setString(2, senha);
+            stmt.setString(2, senhaCriptografada);
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {

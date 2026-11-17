@@ -3,6 +3,7 @@ package negocio;
 import negocio.Receita;
 import negocio.Sintoma;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,6 +15,8 @@ public class PANC {
     private String origem_nativa;
     private List<Receita> receitas_relacionadas = new ArrayList<>();
     private List<Sintoma> sintomas_relacionados = new ArrayList<>();
+    private String ultimo_admin;
+    private LocalDateTime ultima_alteracao;
 
     public PANC() {
         this.receitas_relacionadas = new ArrayList<>();
@@ -50,4 +53,10 @@ public class PANC {
 
     public List<Sintoma> getSintomas_relacionados() { return sintomas_relacionados; }
     public void setSintomas_relacionados(List<Sintoma> sintomas_relacionados) { this.sintomas_relacionados = sintomas_relacionados; }
+
+    public String getUltimo_admin() { return ultimo_admin; }
+    public void setUltimo_admin(String ultimo_admin) { this.ultimo_admin = ultimo_admin; }
+
+    public LocalDateTime getUltima_alteracao() { return ultima_alteracao; }
+    public void setUltima_alteracao(LocalDateTime ultima_alteracao) { this.ultima_alteracao = ultima_alteracao; }
 }

@@ -5,6 +5,7 @@ import negocio.Receita;
 import negocio.Sintoma;
 import negocio.Usuario;
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 
 public class MainFrame extends JFrame {
@@ -18,7 +19,10 @@ public class MainFrame extends JFrame {
     public static final Color BG_MENU = new Color(242, 244, 243);
 
     public MainFrame(Usuario usuario) {
-        this.usuarioLogado = usuario != null ? usuario : criarUsuarioPadrao();
+        if (usuario == null) {
+            throw new IllegalArgumentException("O MainFrame exige um usuário autenticado.");
+        }
+        this.usuarioLogado = usuario;
 
         String perfilStr = (this.usuarioLogado.getAcesso() == 1) ? "Administrador" : "Consulta";
         setTitle("BotanicQ - Conta: " + this.usuarioLogado.getNome() + " (" + perfilStr + ")");
@@ -38,20 +42,9 @@ public class MainFrame extends JFrame {
         inicializarPaineis();
     }
 
-    public MainFrame() {
-        this(criarUsuarioPadrao());
-    }
-
-    private static Usuario criarUsuarioPadrao() {
-        Usuario u = new Usuario();
-        u.setNome("Admin Teste");
-        u.setAcesso(1);
-        return u;
-    }
-
     private JPanel criarMenuLateral() {
         JPanel menu = new JPanel();
-        menu.setLayout(new BoxLayout(menu, BoxLayout.Y_AXIS));
+        menu.setLayout(new BorderLayout());
         menu.setBackground(BG_MENU);
         menu.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createMatteBorder(0, 0, 0, 1, new Color(210, 215, 210)),
@@ -59,19 +52,55 @@ public class MainFrame extends JFrame {
         ));
         menu.setPreferredSize(new Dimension(240, 0));
 
+        JPanel pnlTopo = new JPanel();
+        pnlTopo.setLayout(new BoxLayout(pnlTopo, BoxLayout.Y_AXIS));
+        pnlTopo.setBackground(BG_MENU);
+
         JLabel lblLogo = new JLabel("❀🌿 BotanicQ");
         lblLogo.setFont(new Font("SansSerif", Font.BOLD, 22));
         lblLogo.setForeground(VERDE_ESCURO);
         lblLogo.setAlignmentX(Component.LEFT_ALIGNMENT);
-        menu.add(lblLogo);
+        pnlTopo.add(lblLogo);
 
-        menu.add(Box.createRigidArea(new Dimension(0, 35)));
+        pnlTopo.add(Box.createRigidArea(new Dimension(0, 35)));
 
-        menu.add(criarBotaoMenu("Receitas", "RECEITAS"));
-        menu.add(Box.createRigidArea(new Dimension(0, 12)));
-        menu.add(criarBotaoMenu("PANCs", "PANCS"));
-        menu.add(Box.createRigidArea(new Dimension(0, 12)));
-        menu.add(criarBotaoMenu("Sintomas", "SINTOMAS"));
+        pnlTopo.add(criarBotaoMenu("Receitas", "RECEITAS"));
+        pnlTopo.add(Box.createRigidArea(new Dimension(0, 12)));
+        pnlTopo.add(criarBotaoMenu("PANCs", "PANCS"));
+        pnlTopo.add(Box.createRigidArea(new Dimension(0, 12)));
+        pnlTopo.add(criarBotaoMenu("Sintomas", "SINTOMAS"));
+
+        if (usuarioLogado.getAcesso() == 1) {
+            pnlTopo.add(Box.createRigidArea(new Dimension(0, 12)));
+            pnlTopo.add(criarBotaoMenu("Gerenciar Usuários", "USUARIOS"));
+        }
+
+        menu.add(pnlTopo, BorderLayout.NORTH);
+
+        JPanel pnlRodape = new JPanel();
+        pnlRodape.setLayout(new BoxLayout(pnlRodape, BoxLayout.Y_AXIS));
+        pnlRodape.setBackground(BG_MENU);
+
+        JButton btnLogout = new JButton("Encerrar Sessão");
+        btnLogout.setFont(new Font("SansSerif", Font.BOLD, 13));
+        btnLogout.setForeground(new Color(180, 40, 40));
+        btnLogout.setBackground(Color.WHITE);
+        btnLogout.setFocusPainted(false);
+        btnLogout.setHorizontalAlignment(SwingConstants.LEFT);
+        btnLogout.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btnLogout.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        btnLogout.setPreferredSize(new Dimension(210, 40));
+        btnLogout.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        btnLogout.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(220, 180, 180), 1),
+            BorderFactory.createEmptyBorder(0, 15, 0, 10)
+        ));
+
+        btnLogout.addActionListener(e -> realizarLogout());
+        pnlRodape.add(btnLogout);
+
+        menu.add(pnlRodape, BorderLayout.SOUTH);
 
         return menu;
     }
@@ -104,8 +133,27 @@ public class MainFrame extends JFrame {
         painelConteudo.add(new ReceitasListPanel(this, usuarioLogado), "RECEITAS");
         painelConteudo.add(new PancsListPanel(this, usuarioLogado), "PANCS");
         painelConteudo.add(new SintomasListPanel(this, usuarioLogado), "SINTOMAS");
+        
+        if (usuarioLogado.getAcesso() == 1) {
+            painelConteudo.add(new UsuariosListPanel(this, usuarioLogado), "USUARIOS");
+        }
 
         cardLayout.show(painelConteudo, "RECEITAS");
+    }
+
+    private void realizarLogout() {
+        int resposta = JOptionPane.showConfirmDialog(
+            this, 
+            "Deseja realmente encerrar a sessão e voltar ao login?", 
+            "Confirmação de Saída", 
+            JOptionPane.YES_NO_OPTION, 
+            JOptionPane.QUESTION_MESSAGE
+        );
+
+        if (resposta == JOptionPane.YES_OPTION) {
+            dispose();
+            new LoginFrame().setVisible(true);
+        }
     }
     
     public void exibirDetalhesPanc(PANC panc) {
@@ -140,15 +188,5 @@ public class MainFrame extends JFrame {
         painelConteudo.add(novoPainel, BorderLayout.CENTER);
         painelConteudo.revalidate();
         painelConteudo.repaint();
-    }
-
-    public static void main(String[] args) {
-        try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        SwingUtilities.invokeLater(() -> new LoginFrame().setVisible(true));
     }
 }

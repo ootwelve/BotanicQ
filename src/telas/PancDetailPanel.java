@@ -1,5 +1,6 @@
 package telas;
 
+import negocio.AuditoriaUtil;
 import negocio.PANC;
 import negocio.Receita;
 
@@ -33,6 +34,8 @@ public class PancDetailPanel extends JPanel {
         secaoReceitas.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         pnlCorpo.add(cardInfo);
+        pnlCorpo.add(Box.createVerticalStrut(8));
+        pnlCorpo.add(AuditoriaUtil.criarRotulo(panc.getUltimo_admin(), panc.getUltima_alteracao())); // RF19
         pnlCorpo.add(Box.createVerticalStrut(25));
         pnlCorpo.add(secaoReceitas);
 
@@ -167,16 +170,6 @@ public class PancDetailPanel extends JPanel {
         return bloco;
     }
 
-    private JTextArea criarTextoValor(String texto) {
-        JTextArea txt = new JTextArea(texto != null && !texto.isEmpty() ? texto : "-");
-        txt.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        txt.setLineWrap(true);
-        txt.setWrapStyleWord(true);
-        txt.setEditable(false);
-        txt.setBackground(CINZA_BG);
-        return txt;
-    }
-
     private JPanel criarSecaoReceitas(PANC panc) {
         JPanel pnlSecao = new JPanel();
         pnlSecao.setLayout(new BoxLayout(pnlSecao, BoxLayout.Y_AXIS));
@@ -220,6 +213,7 @@ public class PancDetailPanel extends JPanel {
 
         JLabel lblNome = new JLabel(receita.getTitulo());
         lblNome.setFont(new Font("SansSerif", Font.BOLD, 14));
+        lblNome.setForeground(VERDE_TEXTO);
         lblNome.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JTextArea txtPreparo = new JTextArea("Modo de Preparo: " + receita.getPreparo());
